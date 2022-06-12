@@ -15,10 +15,16 @@ import numpy as np
 import torch
 
 from fairseq import bleu
-from fairseq import checkpoint_utils, distributed_utils, options, progress_bar, tasks, utils
+from fairseq import checkpoint_utils
+from fairseq import distributed_utils
+from fairseq import options
+from fairseq import progress_bar
+from fairseq import tasks
+from fairseq import utils
 from fairseq.data import iterators
+from fairseq.meters import AverageMeter
+from fairseq.meters import StopwatchMeter
 from fairseq.trainer import Trainer
-from fairseq.meters import AverageMeter, StopwatchMeter
 
 
 def main(args, init_distributed=False):
