@@ -116,6 +116,6 @@ fairseq/modules/*_layer/*_backward.cu
 
 # data
 data-bin/
-
+ted/
 # reranking
 examples/reranking/rerank_data
