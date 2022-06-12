@@ -1,4 +1,3 @@
-
 # you need to first download the raw data from https://drive.google.com/file/d/1Va9KHGjPNd9pBvfzujq7aPuGrY-wRn91/view?usp=sharing
 # unzip the file and put it in the working directory
 
@@ -27,15 +26,14 @@ for i in ${!LANS[*]}; do
     --model_prefix="$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN" \
     --vocab_size="$vocab_size"
 
-  for f in "$DATA_DIR"/"$LAN"_eng/*.orig."$LAN"; 
-  do
+  for f in "$DATA_DIR"/"$LAN"_eng/*.orig."$LAN"; do
     python $UDIR/run-spm.py \
       --model="$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN".model \
-      < $f \
-      > ${f/orig/orig.spm$vocab_size} 
+      <$f \
+      >${f/orig/orig.spm$vocab_size}
   done
 
-  cat "$DATA_DIR"/"$LAN"_eng/ted-train.orig.eng >> "$DATA_BIN"/eng/ted-train.orig.eng
+  cat "$DATA_DIR"/"$LAN"_eng/ted-train.orig.eng >>"$DATA_BIN"/eng/ted-train.orig.eng
 done
 
 python train-spm.py \
@@ -46,20 +44,19 @@ python train-spm.py \
 for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
 
-  for f in "$DATA_DIR"/"$LAN"_eng/*.orig.eng; 
-  do
+  for f in "$DATA_DIR"/"$LAN"_eng/*.orig.eng; do
     python $UDIR/run-spm.py \
       --model="$DATA_DIR"/eng/spm"$vocab_size.orig.eng".model \
-      < $f \
-      > ${f/orig/orig.spm$vocab_size} 
+      <$f \
+      >${f/orig/orig.spm$vocab_size}
   done
 done
 
 # binarize the data for fairseq
 for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
-  cat $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size"."$LAN" >> $DATA_BIN/combined-train.spm"$vocab_size".src
-  cat $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size".eng >> $DATA_BIN/combined-train.spm"$vocab_size".eng
+  cat $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size"."$LAN" >>$DATA_BIN/combined-train.spm"$vocab_size".src
+  cat $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size".eng >>$DATA_BIN/combined-train.spm"$vocab_size".eng
 done
 
 python preprocess.py -s src -t eng \
@@ -82,7 +79,7 @@ for i in ${!LANS[*]}; do
     --thresholdtgt 0 \
     --destdir $DATA_BIN
 
-  python preprocess.py -s eng  -t $LAN \
+  python preprocess.py -s eng -t $LAN \
     --trainpref $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size" \
     --validpref $DATA_DIR/"$LAN"_eng/ted-dev.orig.spm"$vocab_size" \
     --testpref $DATA_DIR/"$LAN"_eng/ted-test.orig.spm"$vocab_size" \
@@ -93,5 +90,3 @@ for i in ${!LANS[*]}; do
     --thresholdtgt 0 \
     --destdir $DATA_BIN
 done
-
-
