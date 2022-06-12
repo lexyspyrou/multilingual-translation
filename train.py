@@ -89,7 +89,7 @@ def main(args, init_distributed=False):
     while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update:
         # train for one epoch
         epoch_itr = train(args, trainer, task, epoch_itr, generator, filtered_maxpos_indices)
-        #trainer.update_language_sampler(args)
+        # trainer.update_language_sampler(args)
 
         if not args.disable_validation and epoch_itr.epoch % args.validate_interval == 0:
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets, generator)
@@ -120,11 +120,12 @@ def train(args, trainer, task, epoch_itr, generator=None, filtered_maxpos_indice
     max_update = args.max_update or math.inf
     # data selection: reset epoch iter to filter out unselected data
     if epoch_itr.epoch == args.select_by_dds_epoch and args.select_by_dds_epoch > 0:
-        epoch_itr, _ = trainer.get_filtered_train_iterator(epoch_itr.epoch, filtered_maxpos_indices=filtered_maxpos_indices)
+        epoch_itr, _ = trainer.get_filtered_train_iterator(epoch_itr.epoch,
+                                                           filtered_maxpos_indices=filtered_maxpos_indices)
 
     if args.update_language_sampling > 0 and args.select_by_dds_epoch < 0 and (not args.data_actor_step_update):
-        num_reset = len(epoch_itr.frozen_batches) // (args.update_language_sampling*args.update_freq[0]+1)
-        datasize = args.update_language_sampling*args.update_freq[0]+1
+        num_reset = len(epoch_itr.frozen_batches) // (args.update_language_sampling * args.update_freq[0] + 1)
+        datasize = args.update_language_sampling * args.update_freq[0] + 1
         if num_reset * datasize < len(epoch_itr.frozen_batches):
             num_reset += 1
     else:
@@ -136,7 +137,7 @@ def train(args, trainer, task, epoch_itr, generator=None, filtered_maxpos_indice
         itr = epoch_itr.next_epoch_itr(
             fix_batches_to_gpus=args.fix_batches_to_gpus,
             shuffle=(epoch_itr.epoch >= args.curriculum),
-            offset=reset_idx*(args.update_language_sampling*args.update_freq[0]+1),
+            offset=reset_idx * (args.update_language_sampling * args.update_freq[0] + 1),
             datasize=datasize,
         )
         itr = iterators.GroupedIterator(itr, update_freq)
@@ -145,7 +146,7 @@ def train(args, trainer, task, epoch_itr, generator=None, filtered_maxpos_indice
         )
 
         for i, samples in enumerate(progress, start=epoch_itr.iterations_in_epoch):
-            #print(samples)
+            # print(samples)
             if args.extra_data_actor == 'ave_emb':
                 update_actor = (i % args.extra_update_language_sampling == 0)
             elif args.data_actor_step_update:
@@ -154,7 +155,7 @@ def train(args, trainer, task, epoch_itr, generator=None, filtered_maxpos_indice
                 update_actor = (i % args.update_language_sampling == 0)
             else:
                 update_actor = False
-            if ( epoch_itr.epoch > args.select_by_dds_epoch and args.select_by_dds_epoch > 0): update_actor = False
+            if (epoch_itr.epoch > args.select_by_dds_epoch and args.select_by_dds_epoch > 0): update_actor = False
             log_output = trainer.train_step(samples, update_actor=update_actor)
             if log_output is None:
                 continue
@@ -183,10 +184,10 @@ def train(args, trainer, task, epoch_itr, generator=None, filtered_maxpos_indice
 
             num_updates = trainer.get_num_updates()
             if (
-                not args.disable_validation
-                and args.save_interval_updates > 0
-                and num_updates % args.save_interval_updates == 0
-                and num_updates > 0
+                    not args.disable_validation
+                    and args.save_interval_updates > 0
+                    and num_updates % args.save_interval_updates == 0
+                    and num_updates > 0
             ):
                 valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets, generator)
                 checkpoint_utils.save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
@@ -286,7 +287,7 @@ def validate(args, trainer, task, epoch_itr, subsets, generator=None):
         stats = get_valid_stats(trainer, args, extra_meters)
         if epoch_itr.epoch > args.switch_obj_epoch:
             for k, v in extra_meters.items():
-                #print(k, v.avg)
+                # print(k, v.avg)
                 if k.endswith(":loss"):
                     k = k.split(":")[0]
                     trainer.valid_losses[k] = v.avg
@@ -304,6 +305,7 @@ def validate(args, trainer, task, epoch_itr, subsets, generator=None):
         return [sum(bleus.values())]
     else:
         return valid_losses
+
 
 def validate_translation(args, trainer, task, epoch_itr, generator):
     src_dict = task.source_dictionary
@@ -341,11 +343,11 @@ def validate_translation(args, trainer, task, epoch_itr, generator):
 
     num_sentences = 0
     has_target = True
-    #with progress_bar.build_progress_bar(args, itr) as t:
+    # with progress_bar.build_progress_bar(args, itr) as t:
     for samples in progress:
         if torch.cuda.is_available() and not args.cpu:
             samples = utils.move_to_cuda(samples)
-        #if 'net_input' not in samples:
+        # if 'net_input' not in samples:
         #    continue
 
         prefix_tokens = None
@@ -366,14 +368,14 @@ def validate_translation(args, trainer, task, epoch_itr, generator):
                     src_tokens = utils.strip_pad(sample['net_input']['src_tokens'][i, :], tgt_dict.pad())
 
                 # Either retrieve the original sentences or regenerate them from tokens.
-                #if src_dict is not None:
+                # if src_dict is not None:
                 #    src_str = src_dict.string(src_tokens, args.remove_bpe)
-                #else:
+                # else:
                 #    src_str = ""
                 if has_target:
                     target_str = tgt_dict.string(target_tokens, args.remove_bpe, escape_unk=True)
 
-                #if not args.quiet:
+                # if not args.quiet:
                 #    if src_dict is not None:
                 #        print('S-{}\t{}'.format(sample_id, src_str))
                 #    if has_target:
@@ -390,7 +392,7 @@ def validate_translation(args, trainer, task, epoch_itr, generator):
                         remove_bpe=args.remove_bpe,
                     )
 
-                #if not args.quiet:
+                # if not args.quiet:
                 #    print('H-{}\t{}\t{}'.format(sample_id, hypo['score'], hypo_str))
                 #    print('P-{}\t{}'.format(
                 #        sample_id,
@@ -420,6 +422,7 @@ def validate_translation(args, trainer, task, epoch_itr, generator):
     for key, scorer in scorer_dict.items():
         bleu_dict[key] = scorer.score()
     return bleu_dict
+
 
 def get_valid_stats(trainer, args, extra_meters=None):
     stats = collections.OrderedDict()
@@ -488,7 +491,7 @@ def cli_main():
             print('| NOTE: you may get better performance with: --ddp-backend=no_c10d')
         torch.multiprocessing.spawn(
             fn=distributed_main,
-            args=(args, ),
+            args=(args,),
             nprocs=args.distributed_world_size,
         )
     else:
