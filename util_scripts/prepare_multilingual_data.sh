@@ -1,8 +1,8 @@
 # you need to first download the raw data from https://drive.google.com/file/d/1Va9KHGjPNd9pBvfzujq7aPuGrY-wRn91/view?usp=sharing
 # unzip the file and put it in the working directory
 
-DATA_DIR=ted/
-DATA_BIN=data-bin/ted_8_related/
+DATA_DIR=ted
+DATA_BIN=data-bin/ted_8_related
 vocab_size=8000
 
 # process related language group. Change language names if you want to process other data.
@@ -22,12 +22,12 @@ for i in ${!LANS[*]}; do
   mkdir -p "$DATA_DIR"/eng
 
   python train-spm.py \
-    --input="$DATA_DIR"/"$LAN"_eng/"$DATA_PRE"-train.orig."$LAN" \
+    --input="$DATA_DIR"/"$LAN"_eng/"$DATA_DIR"-train.orig."$LAN" \
     --model_prefix="$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN" \
     --vocab_size="$vocab_size"
 
   for f in "$DATA_DIR"/"$LAN"_eng/*.orig."$LAN"; do
-    python $UDIR/run-spm.py \
+    python run-spm.py \
       --model="$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN".model \
       <$f \
       >${f/orig/orig.spm$vocab_size}
@@ -45,7 +45,7 @@ for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
 
   for f in "$DATA_DIR"/"$LAN"_eng/*.orig.eng; do
-    python $UDIR/run-spm.py \
+    python run-spm.py \
       --model="$DATA_DIR"/eng/spm"$vocab_size.orig.eng".model \
       <$f \
       >${f/orig/orig.spm$vocab_size}
