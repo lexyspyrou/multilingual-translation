@@ -19,7 +19,7 @@ LANS=(
 # sentencepiece the data
 for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
-  mkdir -p "$DATA_DIR"/eng
+  mkdir -p "$DATA_DIR"/eng # create a folder eng in ted directory
 
   python train-spm.py \
     --input="$DATA_DIR"/"$LAN"_eng/"$DATA_DIR"-train.orig."$LAN" \
@@ -33,7 +33,8 @@ for i in ${!LANS[*]}; do
       >${f/orig/orig.spm$vocab_size}
   done
 
-  cat "$DATA_DIR"/"$LAN"_eng/ted-train.orig.eng >>"$DATA_BIN"/eng/ted-train.orig.eng
+  cat "$DATA_DIR"/"$LAN"_eng/ted-train.orig.eng >>"$DATA_DIR"/eng/ted-train.orig.eng # take the eng orig file from the LAN_eng directory and paste it into the eng directory. SHOULD NOT DELETE THE ORIGINAL FILE.
+  cat "$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN".model >>"$DATA_DIR"/eng/spm"$vocab_size.orig.eng.model"  # copy the model to the eng directory
 done
 
 python train-spm.py \
@@ -59,6 +60,8 @@ for i in ${!LANS[*]}; do
   cat $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size".eng >>$DATA_BIN/combined-train.spm"$vocab_size".eng
 done
 
+# preprocess from data-bin/ted_8_related/eng/combined....
+# shellcheck disable=SC1101
 python preprocess.py -s src -t eng \
   --trainpref $DATA_BIN/combined-train.spm"$vocab_size" \
   --workers 8 \
@@ -66,8 +69,10 @@ python preprocess.py -s src -t eng \
   --thresholdtgt 0 \
   --destdir $DATA_BIN
 
+ # pre-process train, dev, test of M2O
 for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
+  # shellcheck disable=SC1101
   python preprocess.py -s $LAN -t eng \
     --trainpref $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size" \
     --validpref $DATA_DIR/"$LAN"_eng/ted-dev.orig.spm"$vocab_size" \
@@ -79,6 +84,7 @@ for i in ${!LANS[*]}; do
     --thresholdtgt 0 \
     --destdir $DATA_BIN
 
+  # pre-process train, dev, test of O2M
   python preprocess.py -s eng -t $LAN \
     --trainpref $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size" \
     --validpref $DATA_DIR/"$LAN"_eng/ted-dev.orig.spm"$vocab_size" \
