@@ -3,10 +3,10 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from functools import lru_cache
 import os
 import shutil
 import struct
+from functools import lru_cache
 
 import numpy as np
 import torch
@@ -26,6 +26,7 @@ def get_available_dataset_impl():
 
 
 def infer_dataset_impl(path):
+    # splits the datasets to raw, cached, mmap and none
     if IndexedRawTextDataset.exists(path):
         return 'raw'
     elif IndexedDataset.exists(path):
@@ -171,7 +172,7 @@ class IndexedDataset(FairseqDataset):
     @staticmethod
     def exists(path):
         return (
-            os.path.exists(index_file_path(path)) and os.path.exists(data_file_path(path))
+                os.path.exists(index_file_path(path)) and os.path.exists(data_file_path(path))
         )
 
     @property
@@ -494,7 +495,7 @@ class MMapIndexedDataset(torch.utils.data.Dataset):
     @staticmethod
     def exists(path):
         return (
-            os.path.exists(index_file_path(path)) and os.path.exists(data_file_path(path))
+                os.path.exists(index_file_path(path)) and os.path.exists(data_file_path(path))
         )
 
 
