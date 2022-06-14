@@ -12,6 +12,7 @@ import shutil
 from collections import Counter
 from itertools import zip_longest
 from multiprocessing import Pool
+from typing import List
 
 from fairseq import options
 from fairseq import tasks
@@ -97,7 +98,7 @@ def main(args):
 
     def make_binary_dataset(vocab, input_prefix, output_prefix, lang, num_workers):
         print("| [{}] Dictionary: {} types".format(lang, len(vocab) - 1))
-        n_seq_tok = [0, 0]
+        n_seq_tok: List[int] = [0, 0]
         replaced = Counter()
 
         def merge_result(worker_result):

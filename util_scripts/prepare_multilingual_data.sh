@@ -34,7 +34,7 @@ for i in ${!LANS[*]}; do
   done
 
   cat "$DATA_DIR"/"$LAN"_eng/ted-train.orig.eng >>"$DATA_DIR"/eng/ted-train.orig.eng # take the eng orig file from the LAN_eng directory and paste it into the eng directory. SHOULD NOT DELETE THE ORIGINAL FILE.
-  cat "$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN".model >>"$DATA_DIR"/eng/spm"$vocab_size.orig.eng.model"  # copy the model to the eng directory
+  #cat "$DATA_DIR"/"$LAN"_eng/spm"$vocab_size.orig.$LAN".model >>"$DATA_DIR"/eng/spm"$vocab_size.orig.eng.model"  # copy the model to the eng directory
 done
 
 python train-spm.py \
