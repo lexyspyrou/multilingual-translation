@@ -27,7 +27,7 @@ python train.py data-bin/ted_8_related/ \
 	  --optimizer 'adam' --adam-betas '(0.9, 0.98)' --lr-scheduler 'inverse_sqrt_decay' \
 	  --warmup-init-lr 1e-7 --warmup-updates 4000 --lr 2e-4 --lr-shrink 0.8 \
 	  --criterion 'label_smoothed_cross_entropy' --label-smoothing 0.1 \
-	  --max-tokens 4800 \
+	  --max-tokens 1000 #4800 \
 	  --update-freq 2 \
 	  --seed 2 \
   	  --max-source-positions 150 --max-target-positions 150 \
