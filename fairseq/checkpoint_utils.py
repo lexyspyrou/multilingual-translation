@@ -3,19 +3,19 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from collections import OrderedDict
-from typing import Union
 import collections
 import logging
 import os
 import re
-import traceback
 import shutil
+import traceback
+from collections import OrderedDict
+from typing import Union
 
 import torch
+from fairseq.models import FairseqDecoder
+from fairseq.models import FairseqEncoder
 from torch.serialization import default_restore_location
-
-from fairseq.models import FairseqEncoder, FairseqDecoder
 
 
 def save_checkpoint(args, trainer, epoch_itr, val_loss):
@@ -41,16 +41,19 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss):
 
     checkpoint_conds = collections.OrderedDict()
     checkpoint_conds['checkpoint{}.pt'.format(epoch)] = (
-        end_of_epoch and not args.no_epoch_checkpoints and
-        epoch % args.save_interval == 0
+            end_of_epoch and not args.no_epoch_checkpoints and
+            epoch % args.save_interval == 0
     )
     checkpoint_conds['checkpoint_{}_{}.pt'.format(epoch, updates)] = (
-        not end_of_epoch and args.save_interval_updates > 0 and
-        updates % args.save_interval_updates == 0
+            not end_of_epoch and args.save_interval_updates > 0 and
+            updates % args.save_interval_updates == 0
     )
+    # Only save the checkpoints where the condition is true. In particular,
+    # if validation loss is present and we either don't have previous checkpoints.best or the existing loss if
+    # better than the so far best.
     checkpoint_conds['checkpoint_best.pt'] = (
-        val_loss is not None and
-        (not hasattr(save_checkpoint, 'best') or is_better(val_loss, save_checkpoint.best))
+            val_loss is not None and
+            (not hasattr(save_checkpoint, 'best') or is_better(val_loss, save_checkpoint.best))
     )
     checkpoint_conds['checkpoint_last.pt'] = not args.no_last_checkpoints
 
@@ -60,8 +63,9 @@ def save_checkpoint(args, trainer, epoch_itr, val_loss):
     }
     if hasattr(save_checkpoint, 'best'):
         extra_state.update({'best': save_checkpoint.best})
-
+    # Only keep the checkpoints whose values are True. Use these checkpoints to save the corresponding model.
     checkpoints = [os.path.join(args.save_dir, fn) for fn, cond in checkpoint_conds.items() if cond]
+    print(f'About to save our model in the following checkpoints: {checkpoints}')
     if len(checkpoints) > 0:
         trainer.save_checkpoint(checkpoints[0], extra_state)
         for cp in checkpoints[1:]:
@@ -111,10 +115,10 @@ def load_checkpoint(args, trainer):
     )
 
     if (
-        extra_state is not None
-        and 'best' in extra_state
-        and not args.reset_optimizer
-        and not args.reset_meters
+            extra_state is not None
+            and 'best' in extra_state
+            and not args.reset_optimizer
+            and not args.reset_meters
     ):
         save_checkpoint.best = extra_state['best']
 
@@ -224,9 +228,9 @@ def convert_state_dict_type(state_dict, ttype=torch.FloatTensor):
 
 
 def save_state(
-    filename, args, model_state_dict, criterion, optimizer, lr_scheduler,
-    num_updates, optim_history=None, extra_state=None, data_actor_state_dict=None, data_optimizer_state_dict=None,
-    extra_data_actor_state_dict=None, extra_data_optimizer_state_dict=None,
+        filename, args, model_state_dict, criterion, optimizer, lr_scheduler,
+        num_updates, optim_history=None, extra_state=None, data_actor_state_dict=None, data_optimizer_state_dict=None,
+        extra_data_actor_state_dict=None, extra_data_optimizer_state_dict=None,
 ):
     from fairseq import utils
     if optim_history is None:
@@ -326,7 +330,7 @@ def _upgrade_state_dict(state):
 
 
 def load_pretrained_component_from_model(
-    component: Union[FairseqEncoder, FairseqDecoder], checkpoint: str
+        component: Union[FairseqEncoder, FairseqDecoder], checkpoint: str
 ):
     """
     Load a pretrained FairseqEncoder or FairseqDecoder from checkpoint into the
