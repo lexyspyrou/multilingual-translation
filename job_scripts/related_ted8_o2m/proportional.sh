@@ -5,7 +5,7 @@
 #SBATCH --time=0
 #SBATCH --mem=15GB
 # --max-tokens 4800
-
+#     --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
 MODEL_DIR=checkpoints/related_ted8_o2m/proportional/
 mkdir -p $MODEL_DIR
 
@@ -18,7 +18,7 @@ python train.py data-bin/ted_8_related/ \
 	  --arch multilingual_transformer_iwslt_de_en \
 	  --max-epoch 40 \
     --dataset-type "multi" \
-    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
+    --lang-pairs "eng-bel,eng-rus" \
 	  --no-epoch-checkpoints \
 	  --distributed-world-size 1 \
 	  --encoder-langtok "tgt" \
