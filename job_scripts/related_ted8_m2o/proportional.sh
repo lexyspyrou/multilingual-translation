@@ -4,6 +4,9 @@
 #SBATCH --gres=gpu:1
 #SBATCH --time=0
 #SBATCH --mem=15GB
+# 	  --max-epoch 40 \
+# 	  --distributed-world-size 1 \ - I think this refers to the number of GPUs
+# changed epochs from 40 to 25
 
 MODEL_DIR=checkpoints/related_ted8_m2o/proportional/
 mkdir -p $MODEL_DIR
@@ -15,7 +18,7 @@ echo 'slurm id '$SLURM_JOB_ID >> $MODEL_DIR/train.log
 python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
-	  --max-epoch 40 \
+	  --max-epoch 25 \
     --dataset-type "multi" \
     --lang-pairs "bel-eng,rus-eng" \
 	  --no-epoch-checkpoints \
@@ -35,4 +38,11 @@ python train.py data-bin/ted_8_related/ \
     --encoder-normalize-before --decoder-normalize-before \
     --scale-norm \
     --datasize-t 1 \
-	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1
+	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
+    --encoder_layers 4 \
+    --encoder_embed_dim 256 \
+    --encoder_ffn_embed_dim 512 \
+    --decoder_layers 4 \
+    --decoder_embed_dim 256 \
+    --decoder_ffn_embed_dim 512 \
+
