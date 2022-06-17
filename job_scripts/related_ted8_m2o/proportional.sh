@@ -39,10 +39,9 @@ python train.py data-bin/ted_8_related/ \
     --scale-norm \
     --datasize-t 1 \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
-    --encoder_layers 4 \
-    --encoder_embed_dim 256 \
-    --encoder_ffn_embed_dim 512 \
-    --decoder_layers 4 \
-    --decoder_embed_dim 256 \
-    --decoder_ffn_embed_dim 512 \
-
+    --encoder-layers 4 \
+    --decoder-layers 4 \
+    --encoder-embed-dim 256 \
+    --decoder-embed-dim 256 \
+    --encoder-ffn-embed-dim 512 \
+    --decoder-ffn-embed-dim 512
