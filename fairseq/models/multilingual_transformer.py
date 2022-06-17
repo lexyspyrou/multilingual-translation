@@ -5,18 +5,14 @@
 from collections import OrderedDict
 
 from fairseq import utils
-from fairseq.models import (
-    FairseqMultiModel,
-    register_model,
-    register_model_architecture,
-)
-from fairseq.models.transformer import (
-    base_architecture,
-    Embedding,
-    TransformerModel,
-    TransformerEncoder,
-    TransformerDecoder,
-)
+from fairseq.models import FairseqMultiModel
+from fairseq.models import register_model
+from fairseq.models import register_model_architecture
+from fairseq.models.transformer import Embedding
+from fairseq.models.transformer import TransformerDecoder
+from fairseq.models.transformer import TransformerEncoder
+from fairseq.models.transformer import TransformerModel
+from fairseq.models.transformer import base_architecture
 
 
 @register_model('multilingual_transformer')
@@ -163,12 +159,12 @@ class MultilingualTransformerModel(FairseqMultiModel):
 
         ret = MultilingualTransformerModel(encoders, decoders, args)
         ret.embed_tokens = shared_encoder_embed_tokens
-        return ret 
+        return ret
 
     def load_state_dict(self, state_dict, strict=True):
         state_dict_subset = state_dict.copy()
         for k, _ in state_dict.items():
-            #assert k.startswith('models.')
+            # assert k.startswith('models.')
             lang_pair = k.split('.')[1]
             if lang_pair not in self.models:
                 del state_dict_subset[k]
@@ -182,6 +178,7 @@ def base_multilingual_architecture(args):
     args.share_decoder_embeddings = getattr(args, 'share_decoder_embeddings', False)
     args.share_encoders = getattr(args, 'share_encoders', False)
     args.share_decoders = getattr(args, 'share_decoders', False)
+
 
 @register_model_architecture('multilingual_transformer', 'multilingual_wmt_transformer')
 def multilingual_wmt_architecture(args):
@@ -213,6 +210,7 @@ def multilingual_wmt_architecture(args):
     args.decoder_output_dim = getattr(args, 'decoder_output_dim', args.decoder_embed_dim)
     args.decoder_input_dim = getattr(args, 'decoder_input_dim', args.decoder_embed_dim)
 
+
 @register_model_architecture('multilingual_transformer', 'multilingual_transformer_iwslt_de_en')
 def multilingual_transformer_iwslt_de_en(args):
     args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 512)
@@ -223,4 +221,5 @@ def multilingual_transformer_iwslt_de_en(args):
     args.decoder_ffn_embed_dim = getattr(args, 'decoder_ffn_embed_dim', 1024)
     args.decoder_attention_heads = getattr(args, 'decoder_attention_heads', 4)
     args.decoder_layers = getattr(args, 'decoder_layers', 6)
+    print(f'encoder_attention_heads: {args.encoder_layers}')
     base_multilingual_architecture(args)
