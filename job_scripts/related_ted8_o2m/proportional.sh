@@ -31,9 +31,10 @@ python train.py data-bin/ted_8_related/ \
 	  --max-tokens 1000 \
 	  --update-freq 2 \
 	  --seed 2 \
-  	  --max-source-positions 150 --max-target-positions 150 \
-  	  --save-dir $MODEL_DIR \
-          --encoder-normalize-before --decoder-normalize-before \
-          --scale-norm \
-          --datasize-t 1 \
-	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1
+  	--max-source-positions 150 --max-target-positions 150 \
+  	--save-dir $MODEL_DIR \
+    --encoder-normalize-before --decoder-normalize-before \
+    --scale-norm \
+    --datasize-t 1 \
+	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
+
