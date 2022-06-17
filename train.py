@@ -76,7 +76,7 @@ def main(args, init_distributed=False):
     # corresponding train iterator
     extra_state, epoch_itr, filtered_maxpos_indices = checkpoint_utils.load_checkpoint(args, trainer)
 
-    # pretrain data actor
+    # pretrain data actor == pretrain the distribution to sample languages from trainer.py
     if args.pretrain_data_actor and args.data_actor == 'lan' and args.data_actor_step_update:
         trainer.pretrain_data_actor()
 
@@ -105,7 +105,7 @@ def main(args, init_distributed=False):
         # only use first validation loss to update the learning rate
         lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
-        # save checkpoint
+        # save checkpoint after specific intervals
         if epoch_itr.epoch % args.save_interval == 0:
             checkpoint_utils.save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
 
