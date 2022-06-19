@@ -30,28 +30,33 @@ OUTDIR=$1
 #          --lang-pairs "aze-eng,tur-eng,bel-eng,rus-eng,glg-eng,por-eng,slk-eng,ces-eng" \
 #          --source-lang tur --target-lang eng \
 #          --beam 5   > "$OUTDIR"/test_tureng.log
+#FIXME: Added --encoder-langtok "tgt" and --skip-invalid-size-inputs-valid-test \. Is it correct choice ?
 
 python generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
           --path "$OUTDIR"/checkpoint_best.pt \
           --batch-size 32 \
+          --encoder-langtok tgt \
           --lenpen 1.0 \
+          --skip-invalid-size-inputs-valid-test \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
-          --lang-pairs "bel-eng, rus-eng" \
+          --lang-pairs "bel-eng,rus-eng" \
           --source-lang bel --target-lang eng \
           --beam 5   > "$OUTDIR"/test_beleng.log
 
 python generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
+          --encoder-langtok tgt \
           --path "$OUTDIR"/checkpoint_best.pt \
           --batch-size 32 \
           --lenpen 1.0 \
+          --skip-invalid-size-inputs-valid-test \
           --remove-bpe sentencepiece \
-	  --sacrebleu \
-          --lang-pairs "bel-eng, rus-eng" \
+	        --sacrebleu \
+          --lang-pairs "bel-eng,rus-eng" \
           --source-lang rus --target-lang eng \
           --beam 5   > "$OUTDIR"/test_ruseng.log
 #

@@ -42,7 +42,7 @@ python generate.py data-bin/ted_8_related/ \
           --remove-bpe sentencepiece \
           --encoder-langtok "tgt" \
 	        --sacrebleu \
-      	  --lang-pairs "eng-bel, eng-bel" \
+      	  --lang-pairs "eng-bel,eng-bel" \
           --source-lang eng --target-lang bel \
           --beam 5  > "$OUTDIR"/test_engbel.log
 
