@@ -18,7 +18,7 @@ echo 'slurm id '$SLURM_JOB_ID >> $MODEL_DIR/train.log
 python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
-	  --max-epoch 25 \
+	  --max-epoch 40 \
     --dataset-type "multi" \
     --lang-pairs "bel-eng,rus-eng" \
 	  --no-epoch-checkpoints \
@@ -39,8 +39,8 @@ python train.py data-bin/ted_8_related/ \
     --scale-norm \
     --datasize-t 1 \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
-    --encoder-layers 4 \
-    --decoder-layers 4 \
+    --encoder-layers 5 \
+    --decoder-layers 5 \
     --encoder-embed-dim 256 \
     --decoder-embed-dim 256 \
     --encoder-ffn-embed-dim 512 \
