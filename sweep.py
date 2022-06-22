@@ -1,14 +1,14 @@
 import argparse
-from collections import OrderedDict
 import datetime
-from glob import glob
 import itertools
 import os
-from pathlib import Path
 import random
 import shlex
 import shutil
 import subprocess
+from collections import OrderedDict
+from glob import glob
+from pathlib import Path
 
 
 def get_args():
@@ -220,7 +220,7 @@ def launch_train(args, config):
     #     return
 
     # generate train command
-    train_cmd = ['python', os.path.join(destination, 'train.py')]
+    train_cmd = ['python', os.path.join(destination, 'train_old.py')]
 
     post_cmds = []
     if args.post_steps:

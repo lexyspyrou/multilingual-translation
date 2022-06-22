@@ -1,6 +1,6 @@
 # Finetuning RoBERTa on Commonsense QA
 
-We follow a similar approach to [finetuning RACE](README.race.md). Specifically
+We follow a similar approach to [finetuning RACE](../README.race.md). Specifically
 for each question we construct five inputs, one for each of the five candidate
 answer choices. Each input is constructed by concatenating the question and
 candidate answer. We then encode each input and pass the resulting "[CLS]"
@@ -39,7 +39,7 @@ DATA_DIR=data/CommonsenseQA
 FAIRSEQ_PATH=/path/to/fairseq
 FAIRSEQ_USER_DIR=${FAIRSEQ_PATH}/examples/roberta/commonsense_qa
 
-CUDA_VISIBLE_DEVICES=0 fairseq-train --fp16 \
+CUDA_VISIBLE_DEVICES=0 fairseq-train --fp16 --ddp-backend=legacy_ddp \
     $DATA_DIR \
     --user-dir $FAIRSEQ_USER_DIR \
     --restore-file $ROBERTA_PATH \
@@ -51,16 +51,16 @@ CUDA_VISIBLE_DEVICES=0 fairseq-train --fp16 \
     --dropout 0.1 --attention-dropout 0.1 --weight-decay 0.01 \
     --criterion sentence_ranking --num-classes 5 \
     --optimizer adam --adam-betas '(0.9, 0.98)' --adam-eps 1e-06 --clip-norm 0.0 \
-    --lr-scheduler polynomial_decay --lr $LR
+    --lr-scheduler polynomial_decay --lr $LR \
     --warmup-updates $WARMUP_UPDATES --total-num-update $MAX_UPDATES \
-    --max-sentences $MAX_SENTENCES \
+    --batch-size $MAX_SENTENCES \
     --max-update $MAX_UPDATES \
     --log-format simple --log-interval 25 \
     --seed $SEED
 ```
 
 The above command assumes training on 1 GPU with 32GB of RAM. For GPUs with
-less memory, decrease `--max-sentences` and increase `--update-freq`
+less memory, decrease `--batch-size` and increase `--update-freq`
 accordingly to compensate.
 
 ### 3) Evaluate
@@ -96,4 +96,4 @@ print('Accuracy: ' + str(ncorrect / float(nsamples)))
 ```
 
 The above snippet is not batched, which makes it quite slow. See [instructions
-for batched prediction with RoBERTa](https://github.com/pytorch/fairseq/tree/master/examples/roberta#batched-prediction).
+for batched prediction with RoBERTa](https://github.com/pytorch/fairseq/tree/main/examples/roberta#batched-prediction).
