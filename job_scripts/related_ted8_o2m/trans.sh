@@ -33,7 +33,7 @@ echo $OUTDIR
 #          --beam 5   > "$OUTDIR"/test_engtur.log
 
 #FIXME: Added --encoder-langtok "tgt". Is it correct choice ?
-python generate.py data-bin/ted_8_related/ \
+python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
           --path "$OUTDIR"/checkpoint_best.pt \
@@ -46,15 +46,16 @@ python generate.py data-bin/ted_8_related/ \
           --source-lang eng --target-lang bel \
           --beam 5  > "$OUTDIR"/test_engbel.log
 
-python generate.py data-bin/ted_8_related/ \
+python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
           --path "$OUTDIR"/checkpoint_best.pt \
           --batch-size 32 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
-	  --sacrebleu \
-    	  --lang-pairs "eng-bel,eng-rus" \
+          --encoder-langtok "tgt" \
+	        --sacrebleu \
+    	    --lang-pairs "eng-bel,eng-rus" \
           --source-lang eng --target-lang rus \
           --beam 5   > "$OUTDIR"/test_engrus.log
 #
