@@ -32,7 +32,7 @@ echo $OUTDIR
 #          --source-lang eng --target-lang tur \
 #          --beam 5   > "$OUTDIR"/test_engtur.log
 
-#FIXME: Added --encoder-langtok "tgt". Is it correct choice ?
+#FIXME: Added --encoder-langtok "tgt" and --skip-invalid-size-inputs-valid-test \. Is it correct choice ?
 python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
@@ -40,9 +40,10 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --batch-size 32 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
-          --encoder-langtok "tgt" \
 	        --sacrebleu \
-      	  --lang-pairs "eng-bel,eng-bel" \
+	        --encoder-langtok "tgt" \
+	        --skip-invalid-size-inputs-valid-test \
+      	  --lang-pairs "eng-bel,eng-rus" \
           --source-lang eng --target-lang bel \
           --beam 5  > "$OUTDIR"/test_engbel.log
 
@@ -53,12 +54,13 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --batch-size 32 \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
-          --encoder-langtok "tgt" \
 	        --sacrebleu \
+	        --encoder-langtok "tgt" \
+	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-bel,eng-rus" \
           --source-lang eng --target-lang rus \
           --beam 5   > "$OUTDIR"/test_engrus.log
-#
+
 #python generate.py data-bin/ted_8_related/ \
 #          --task multilingual_translation \
 #          --gen-subset test \
