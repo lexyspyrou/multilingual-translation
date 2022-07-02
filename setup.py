@@ -4,17 +4,17 @@
 # This source code is licensed under the MIT license found in the
 # LICENSE file in the root directory of this source tree.
 
-from setuptools import setup, find_packages, Extension
 import sys
 
+from setuptools import Extension
+from setuptools import find_packages
+from setuptools import setup
 
 if sys.version_info < (3,):
     sys.exit('Sorry, Python3 is required for fairseq.')
 
-
 with open('README.md') as f:
     readme = f.read()
-
 
 if sys.platform == 'darwin':
     extra_compile_args = ['-stdlib=libc++', '-O3']
@@ -62,7 +62,6 @@ extensions = [
     ),
 ]
 
-
 setup(
     name='fairseq',
     version='0.8.0',
@@ -73,6 +72,7 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',  # i added that
         'Topic :: Scientific/Engineering :: Artificial Intelligence',
     ],
     long_description=readme,

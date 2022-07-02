@@ -32,7 +32,7 @@ OUTDIR=$1
 #          --beam 5   > "$OUTDIR"/test_tureng.log
 #FIXME: Added --encoder-langtok "tgt" and --skip-invalid-size-inputs-valid-test \. Is it correct choice ?
 
-python generate.py data-bin/ted_8_related/ \
+python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
           --path "$OUTDIR"/checkpoint_best.pt \
@@ -46,7 +46,7 @@ python generate.py data-bin/ted_8_related/ \
           --source-lang bel --target-lang eng \
           --beam 5   > "$OUTDIR"/test_beleng.log
 
-python generate.py data-bin/ted_8_related/ \
+python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --task multilingual_translation \
           --gen-subset test \
           --encoder-langtok tgt \
