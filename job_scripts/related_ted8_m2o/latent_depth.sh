@@ -18,7 +18,7 @@ echo 'slurm id '$SLURM_JOB_ID >> $MODEL_DIR/train.log
 
 lang_pairs_str="bel-eng,rus-eng"
 
-python train.py data-bin/ted_8_related/ \
+fairseq-train data-bin/ted_8_related/ \
   --user-dir examples/latent_depth/latent_depth_src \
   --lang-pairs "${lang_pairs_str}" \
   --arch multilingual_transformer_iwslt_de_en \
@@ -36,11 +36,12 @@ python train.py data-bin/ted_8_related/ \
   --clip-norm 1.0 \
   --seed 2 \
   --ddp-backend=legacy_ddp \
-  --encoder-layers 24 \
-  --decoder-layers 12 \
+  --encoder-layers 4 \
+  --decoder-layers 8 \
   --decoder-latent-layer \
   --sparsity-weight 0.1 \
   --anneal-updates 5000 \
   --soft-update 500  \
-  --target-layers 12 \
-  --share-weight 0.1
+  --target-layers 4 \
+  --share-weight 0.1 \
+  --max-epoch 25
