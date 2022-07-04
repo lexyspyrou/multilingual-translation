@@ -62,7 +62,7 @@ done
 
 # preprocess from data-bin/ted_8_related/eng/combined....
 # shellcheck disable=SC1101
-python preprocess.py -s src -t eng \
+fairseq-preprocess -s src -t eng \
   --trainpref $DATA_BIN/combined-train.spm"$vocab_size" \
   --workers 8 \
   --thresholdsrc 0 \
@@ -73,7 +73,7 @@ python preprocess.py -s src -t eng \
 for i in ${!LANS[*]}; do
   LAN=${LANS[$i]}
   # shellcheck disable=SC1101
-  python preprocess.py -s $LAN -t eng \
+  fairseq-preprocess -s $LAN -t eng \
     --trainpref $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size" \
     --validpref $DATA_DIR/"$LAN"_eng/ted-dev.orig.spm"$vocab_size" \
     --testpref $DATA_DIR/"$LAN"_eng/ted-test.orig.spm"$vocab_size" \
@@ -85,7 +85,7 @@ for i in ${!LANS[*]}; do
     --destdir $DATA_BIN
 
   # pre-process train, dev, test of O2M
-  python preprocess.py -s eng -t $LAN \
+  fairseq-preprocess -s eng -t $LAN \
     --trainpref $DATA_DIR/"$LAN"_eng/ted-train.orig.spm"$vocab_size" \
     --validpref $DATA_DIR/"$LAN"_eng/ted-dev.orig.spm"$vocab_size" \
     --testpref $DATA_DIR/"$LAN"_eng/ted-test.orig.spm"$vocab_size" \
