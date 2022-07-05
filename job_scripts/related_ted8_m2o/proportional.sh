@@ -14,7 +14,7 @@ python train.py data-bin/ted_8_related/ \
 	  --max-epoch 1 \
     --lang-pairs "bel-eng,rus-eng" \
 	  --no-epoch-checkpoints \
-	  --distributed-world-size 4 \
+	  --distributed-world-size 1 \
 	  --encoder-langtok "tgt" \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.3 --relu-dropout 0.3 --weight-decay 0.0 \
@@ -35,4 +35,5 @@ python train.py data-bin/ted_8_related/ \
     --decoder-embed-dim 256 \
     --encoder-ffn-embed-dim 512 \
     --decoder-ffn-embed-dim 512 \
-    --skip-invalid-size-inputs-valid-test
+    --skip-invalid-size-inputs-valid-test \
+    --ddp-backend=no_c10d
