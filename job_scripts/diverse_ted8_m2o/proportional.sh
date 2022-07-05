@@ -16,10 +16,10 @@ python train.py data-bin/ted_8_diverse/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
 	  --max-epoch 40 \
-          --dataset-type "multi" \
-          --lang-pairs "bos-eng,mar-eng,hin-eng,mkd-eng,ell-eng,bul-eng,fra-eng,kor-eng" \
+    --dataset-type "multi" \
+    --lang-pairs "bos-eng,mar-eng,hin-eng,mkd-eng,ell-eng,bul-eng,fra-eng,kor-eng" \
 	  --no-epoch-checkpoints \
-	  --distributed-world-size 1 \
+	  --distributed-world-size 4 \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.3 --relu-dropout 0.3 --weight-decay 0.0 \
 	  --left-pad-source 'True' --left-pad-target 'False' \
