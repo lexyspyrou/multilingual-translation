@@ -4,7 +4,7 @@ lang_pairs_str="eng-aze,eng-bel,eng-ces,eng-glg,eng-por,eng-rus,eng-slk,eng-tur"
 
 # Code adapted to work on a small GPU: In specific, --max-tokens 4096, --encoder-layers 12, --decoder-layers 24, --target-layers 12
 
-MODEL_DIR=checkpoints/related_ted8_o2m/latent_depth/
+MODEL_DIR=checkpoints/related_ted8_o2m/latent_depth/small_network/
 mkdir -p $MODEL_DIR
 export PYTHONPATH="$(pwd)"
 
@@ -24,7 +24,7 @@ fairseq-train data-bin/ted_8_related/ \
   --dropout 0.3 --attention-dropout 0.3 \
   --optimizer adam --adam-eps 1e-06 --adam-betas '(0.9, 0.98)' \
   --lr-scheduler inverse_sqrt --stop-min-lr 1e-9 --warmup-init-lr 1e-7 --warmup-updates 8000 \
-  --max-tokens 100 --update-freq 1  \
+  --max-tokens 2000 --update-freq 1  \
   --lr 0.0015 \
   --clip-norm 1.0 \
   --seed 2 \
@@ -36,7 +36,7 @@ fairseq-train data-bin/ted_8_related/ \
   --anneal-updates 5000 \
   --soft-update 500  \
   --target-layers 4 \
-  --distributed-world-size 3 \
+  --distributed-world-size 1 \
   --share-weight 0.1 \
   --encoder-embed-dim 256 \
   --decoder-embed-dim 256 \
