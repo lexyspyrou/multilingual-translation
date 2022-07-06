@@ -36,7 +36,7 @@ fairseq-train data-bin/ted_8_related/ \
   --anneal-updates 5000 \
   --soft-update 500  \
   --target-layers 4 \
-  --distributed-world-size 1 \
+  --distributed-world-size 2 \
   --share-weight 0.1 \
   --encoder-embed-dim 256 \
   --decoder-embed-dim 256 \
