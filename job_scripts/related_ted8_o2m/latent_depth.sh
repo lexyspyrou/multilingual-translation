@@ -24,7 +24,7 @@ fairseq-train data-bin/ted_8_related/ \
   --dropout 0.3 --attention-dropout 0.3 \
   --optimizer adam --adam-eps 1e-06 --adam-betas '(0.9, 0.98)' \
   --lr-scheduler inverse_sqrt --stop-min-lr 1e-9 --warmup-init-lr 1e-7 --warmup-updates 8000 \
-  --max-tokens 500 --update-freq 1  \
+  --max-tokens 4096 --update-freq 1  \
   --lr 0.0015 \
   --clip-norm 1.0 \
   --seed 2 \
