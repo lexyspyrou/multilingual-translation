@@ -9,7 +9,7 @@ echo 'slurm id '$SLURM_JOB_ID >> $MODEL_DIR/train.log
 python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
-	  --max-epoch 1 \
+	  --max-epoch 40  \
     --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
     --no-epoch-checkpoints \
 	  --distributed-world-size 4 \
