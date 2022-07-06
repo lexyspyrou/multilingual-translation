@@ -21,7 +21,7 @@ lang_pairs_str="bel-eng,rus-eng"
 fairseq-train data-bin/ted_8_related/ \
   --user-dir examples/latent_depth/latent_depth_src \
   --lang-pairs "${lang_pairs_str}" \
-  --arch multilingual_transformer_iwslt_de_en \
+  --arch latent_multilingual_transformer \
   --task multilingual_translation_latent_depth \
   --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
   --share-encoders \
