@@ -42,5 +42,3 @@ fairseq-train data-bin/ted_8_related/ \
   --decoder-embed-dim 512 \
   --encoder-ffn-embed-dim 1024 \
   --decoder-ffn-embed-dim 1024 \
-  --encoder_attention_heads 4 \
-  --decoder_attention_heads 4 \
