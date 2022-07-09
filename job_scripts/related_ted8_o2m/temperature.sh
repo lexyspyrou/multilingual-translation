@@ -16,7 +16,7 @@ python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
 	  --max-epoch 1  \
-    --lang-pairs "eng-aze" \
+    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
     --no-epoch-checkpoints \
 	  --distributed-world-size 1 \
 	  --encoder-langtok "tgt" \
@@ -35,9 +35,9 @@ python train.py data-bin/ted_8_related/ \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
     --skip-invalid-size-inputs-valid-test \
     --ddp-backend=no_c10d \
-    --encoder-layers 4 \
-    --decoder-layers 4 \
-    --encoder-embed-dim 256 \
-    --decoder-embed-dim 256 \
-    --encoder-ffn-embed-dim 512 \
-    --decoder-ffn-embed-dim 512 \
+    --encoder-layers 2 \
+    --decoder-layers 2 \
+    --encoder-embed-dim 32 \
+    --decoder-embed-dim 32 \
+    --encoder-ffn-embed-dim 64 \
+    --decoder-ffn-embed-dim 64 \
