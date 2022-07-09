@@ -2,7 +2,7 @@
 # unzip the file and put it in the working directory
 
 DATA_DIR=ted
-DATA_BIN=data-bin/ted_8_related
+DATA_BIN=data-bin/ted_8_diverse
 vocab_size=8000
 
 # process related language group. Change language names if you want to process other data.
