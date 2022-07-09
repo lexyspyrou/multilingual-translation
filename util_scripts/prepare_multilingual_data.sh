@@ -7,14 +7,14 @@ vocab_size=8000
 
 # process related language group. Change language names if you want to process other data.
 LANS=(
-  aze
-  tur
-  bel
-  rus
-  glg
-  por
-  slk
-  ces)
+  bos
+  bul
+  ell
+  fra
+  kor
+  hin
+  mar
+  mkd)
 
 # sentencepiece the data
 for i in ${!LANS[*]}; do
