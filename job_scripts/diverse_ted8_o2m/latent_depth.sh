@@ -1,10 +1,10 @@
 #lang_pairs_str="eng-bos,eng-mar,eng-hin,eng-mkd,eng-ell,eng-bul,eng-fra,eng-kor"
-lang_pairs_str="eng-bos"
+lang_pairs_str="eng-bos,eng-mar,eng-hin,eng-mkd,eng-ell,eng-bul,eng-fra,eng-kor"
 #  --arch multilingual_transformer_iwslt_de_en \
 
 # Code adapted to work on a small GPU: In specific, --max-tokens 4096, --encoder-layers 12, --decoder-layers 24, --target-layers 12
 
-MODEL_DIR=checkpoints/diverse_ted8_o2m/latent_depth/mini/
+MODEL_DIR=checkpoints/diverse_ted8_o2m/latent_depth/original/
 mkdir -p $MODEL_DIR
 export PYTHONPATH="$(pwd)"
 
@@ -18,7 +18,7 @@ fairseq-train data-bin/ted_8_diverse/ \
   --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
   --share-encoders \
   --share-decoders \
-	--max-epoch 1 \
+	--max-epoch 40 \
   --decoder-langtok \
   --share-decoder-input-output-embed \
   --dropout 0.3 --attention-dropout 0.3 \
@@ -36,7 +36,7 @@ fairseq-train data-bin/ted_8_diverse/ \
   --anneal-updates 5000 \
   --soft-update 500  \
   --target-layers 6 \
-  --distributed-world-size 1 \
+  --distributed-world-size 2 \
   --share-weight 0.1 \
   --encoder-embed-dim 512 \
   --decoder-embed-dim 512 \
