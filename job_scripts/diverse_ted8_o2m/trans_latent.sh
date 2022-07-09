@@ -6,7 +6,7 @@
 #SBATCH --mem=15GB
 #CHANGE THE INFERENCE COMMAND TO SHOW WHERE checkpoint_best.pt IS SAVED
 # BE CAREFUL WHERE THE TRANSLATIONS ARE SAVED
-lang_pairs_str="eng-bos,eng-mar,eng-hin,eng-mkd,eng-ell,eng-bul,eng-fra,eng-kor"
+lang_pairs_str="eng-bos"
 
 src_lang="eng"
 
