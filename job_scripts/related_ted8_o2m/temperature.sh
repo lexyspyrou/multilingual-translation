@@ -35,3 +35,9 @@ python train.py data-bin/ted_8_related/ \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
     --skip-invalid-size-inputs-valid-test \
     --ddp-backend=no_c10d \
+    --encoder-layers 4 \
+    --decoder-layers 4 \
+    --encoder-embed-dim 256 \
+    --decoder-embed-dim 256 \
+    --encoder-ffn-embed-dim 512 \
+    --decoder-ffn-embed-dim 512
