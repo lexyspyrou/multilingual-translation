@@ -5,7 +5,7 @@
 #SBATCH --time=0
 #SBATCH --mem=15GB
 
-MODEL_DIR=checkpoints/related_ted8_o2m/temperature/
+MODEL_DIR=checkpoints/related_ted8_o2m/temperature/original
 mkdir -p $MODEL_DIR
 
 export PYTHONPATH="$(pwd)"
@@ -18,7 +18,7 @@ python train.py data-bin/ted_8_related/ \
 	  --max-epoch 1  \
     --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
     --no-epoch-checkpoints \
-	  --distributed-world-size 1 \
+	  --distributed-world-size 4 \
 	  --encoder-langtok "tgt" \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.3 --relu-dropout 0.3 --weight-decay 0.0 \
@@ -35,9 +35,3 @@ python train.py data-bin/ted_8_related/ \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
     --skip-invalid-size-inputs-valid-test \
     --ddp-backend=no_c10d \
-    --encoder-layers 2 \
-    --decoder-layers 2 \
-    --encoder-embed-dim 32 \
-    --decoder-embed-dim 32 \
-    --encoder-ffn-embed-dim 64 \
-    --decoder-ffn-embed-dim 64 \
