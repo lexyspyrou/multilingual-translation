@@ -18,7 +18,7 @@ python train.py data-bin/ted_8_related/ \
 	  --max-epoch 40  \
     --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
     --no-epoch-checkpoints \
-	  --distributed-world-size 4 \
+	  --distributed-world-size 3 \
 	  --encoder-langtok "tgt" \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.3 --relu-dropout 0.3 --weight-decay 0.0 \
