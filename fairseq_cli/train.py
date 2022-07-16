@@ -20,7 +20,6 @@ from typing import Optional
 from typing import Tuple
 
 # We need to setup root logger before importing any fairseq libraries.
-from fairseq.fed_utils import save_expert_outputs
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -212,6 +211,7 @@ def main(cfg: FairseqConfig) -> None:
     logger.info("done training in {:.1f} seconds".format(train_meter.sum))
 
     if cfg.checkpoint.save_teacher_output:
+        from fairseq.fed_utils import save_expert_outputs
         logger.info("Saving teacher experts")
         save_expert_outputs(cfg, task, trainer)
 
@@ -255,7 +255,7 @@ def should_stop_early(cfg: DictConfig, valid_loss: float) -> bool:
 
 @metrics.aggregate("train")
 def train(
-    cfg: DictConfig, trainer: Trainer, task: tasks.FairseqTask, epoch_itr
+        cfg: DictConfig, trainer: Trainer, task: tasks.FairseqTask, epoch_itr
 ) -> Tuple[List[Optional[float]], bool]:
     """Train the model for one epoch and return validation losses."""
     # Initialize data iterator
