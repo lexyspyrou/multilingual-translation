@@ -12,9 +12,16 @@ import logging
 import math
 import os
 import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any
+from typing import Callable
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Tuple
 
 # We need to setup root logger before importing any fairseq libraries.
+from fairseq.fed_utils import save_expert_outputs
+
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
@@ -49,14 +56,14 @@ def main(cfg: FairseqConfig) -> None:
     add_defaults(cfg)
 
     if (
-        distributed_utils.is_master(cfg.distributed_training)
-        and "job_logging_cfg" in cfg
+            distributed_utils.is_master(cfg.distributed_training)
+            and "job_logging_cfg" in cfg
     ):
         # make hydra logging work with ddp (see # see https://github.com/facebookresearch/hydra/issues/1126)
         logging.config.dictConfig(OmegaConf.to_container(cfg.job_logging_cfg))
 
     assert (
-        cfg.dataset.max_tokens is not None or cfg.dataset.batch_size is not None
+            cfg.dataset.max_tokens is not None or cfg.dataset.batch_size is not None
     ), "Must specify batch size either with --max-tokens or --batch-size"
     metrics.reset()
 
@@ -204,6 +211,10 @@ def main(cfg: FairseqConfig) -> None:
     train_meter.stop()
     logger.info("done training in {:.1f} seconds".format(train_meter.sum))
 
+    if cfg.checkpoint.save_teacher_output:
+        logger.info("Saving teacher experts")
+        save_expert_outputs(cfg, task, trainer)
+
     # ioPath implementation to wait for all asynchronous file writes to complete.
     if cfg.checkpoint.write_checkpoints_asynchronously:
         logger.info(
@@ -311,7 +322,7 @@ def train(
     logger.info("Start iterating over samples")
     for i, samples in enumerate(progress):
         with metrics.aggregate("train_inner"), torch.autograd.profiler.record_function(
-            "train_step-%d" % i
+                "train_step-%d" % i
         ):
             log_output = trainer.train_step(samples)
 
@@ -358,12 +369,12 @@ def _flatten_config(cfg: DictConfig):
 
 
 def validate_and_save(
-    cfg: DictConfig,
-    trainer: Trainer,
-    task: tasks.FairseqTask,
-    epoch_itr,
-    valid_subsets: List[str],
-    end_of_epoch: bool,
+        cfg: DictConfig,
+        trainer: Trainer,
+        task: tasks.FairseqTask,
+        epoch_itr,
+        valid_subsets: List[str],
+        end_of_epoch: bool,
 ) -> Tuple[List[Optional[float]], bool]:
     num_updates = trainer.get_num_updates()
     max_update = cfg.optimization.max_update or math.inf
@@ -380,8 +391,8 @@ def validate_and_save(
 
     training_time_hours = trainer.cumulative_training_time() / (60 * 60)
     if (
-        cfg.optimization.stop_time_hours > 0
-        and training_time_hours > cfg.optimization.stop_time_hours
+            cfg.optimization.stop_time_hours > 0
+            and training_time_hours > cfg.optimization.stop_time_hours
     ):
         should_stop = True
         logger.info(
@@ -391,28 +402,28 @@ def validate_and_save(
         )
 
     do_save = (
-        (end_of_epoch and epoch_itr.epoch % cfg.checkpoint.save_interval == 0)
-        or should_stop
-        or (
-            cfg.checkpoint.save_interval_updates > 0
-            and num_updates > 0
-            and num_updates % cfg.checkpoint.save_interval_updates == 0
-            and num_updates >= cfg.dataset.validate_after_updates
-        )
-    )
-    do_validate = (
-        (
-            (not end_of_epoch and do_save)  # validate during mid-epoch saves
-            or (end_of_epoch and epoch_itr.epoch % cfg.dataset.validate_interval == 0)
+            (end_of_epoch and epoch_itr.epoch % cfg.checkpoint.save_interval == 0)
             or should_stop
             or (
-                cfg.dataset.validate_interval_updates > 0
-                and num_updates > 0
-                and num_updates % cfg.dataset.validate_interval_updates == 0
+                    cfg.checkpoint.save_interval_updates > 0
+                    and num_updates > 0
+                    and num_updates % cfg.checkpoint.save_interval_updates == 0
+                    and num_updates >= cfg.dataset.validate_after_updates
             )
-        )
-        and not cfg.dataset.disable_validation
-        and num_updates >= cfg.dataset.validate_after_updates
+    )
+    do_validate = (
+            (
+                    (not end_of_epoch and do_save)  # validate during mid-epoch saves
+                    or (end_of_epoch and epoch_itr.epoch % cfg.dataset.validate_interval == 0)
+                    or should_stop
+                    or (
+                            cfg.dataset.validate_interval_updates > 0
+                            and num_updates > 0
+                            and num_updates % cfg.dataset.validate_interval_updates == 0
+                    )
+            )
+            and not cfg.dataset.disable_validation
+            and num_updates >= cfg.dataset.validate_after_updates
     )
 
     # Validate
@@ -437,11 +448,11 @@ def get_training_stats(stats: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def validate(
-    cfg: DictConfig,
-    trainer: Trainer,
-    task: tasks.FairseqTask,
-    epoch_itr,
-    subsets: List[str],
+        cfg: DictConfig,
+        trainer: Trainer,
+        task: tasks.FairseqTask,
+        epoch_itr,
+        subsets: List[str],
 ) -> List[Optional[float]]:
     """Evaluate the model on the validation set(s) and return the losses."""
 
@@ -498,8 +509,8 @@ def validate(
         with metrics.aggregate(new_root=True) as agg:
             for i, sample in enumerate(progress):
                 if (
-                    cfg.dataset.max_valid_steps is not None
-                    and i > cfg.dataset.max_valid_steps
+                        cfg.dataset.max_valid_steps is not None
+                        and i > cfg.dataset.max_valid_steps
                 ):
                     break
                 trainer.valid_step(sample)
@@ -519,10 +530,10 @@ def validate(
 
 
 def get_valid_stats(
-    cfg: DictConfig,
-    trainer: Trainer,
-    stats: Dict[str, Any],
-    tracking_best: bool,
+        cfg: DictConfig,
+        trainer: Trainer,
+        stats: Dict[str, Any],
+        tracking_best: bool,
 ) -> Dict[str, Any]:
     stats["num_updates"] = trainer.get_num_updates()
     if tracking_best and hasattr(checkpoint_utils.save_checkpoint, "best"):
@@ -536,7 +547,7 @@ def get_valid_stats(
 
 
 def cli_main(
-    modify_parser: Optional[Callable[[argparse.ArgumentParser], None]] = None
+        modify_parser: Optional[Callable[[argparse.ArgumentParser], None]] = None
 ) -> None:
     parser = options.get_training_parser()
     args = options.parse_args_and_arch(parser, modify_parser=modify_parser)
@@ -548,6 +559,7 @@ def cli_main(
         logger.info(
             f"Started plasma server pid {server.server.pid} {cfg.common.plasma_path}"
         )
+    logger.info(f"Ensuring {cfg.checkpoint.save_teacher_output} is false when not set")
 
     if args.profile:
         with torch.cuda.profiler.profile():
