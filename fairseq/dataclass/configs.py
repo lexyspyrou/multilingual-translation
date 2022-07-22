@@ -790,6 +790,10 @@ class CheckpointConfig(FairseqDataclass):
                     "Only valid when save_teacher_output is true"},
     )
 
+    universal: bool = field(
+        default=True,
+
+    )
 
 @dataclass
 class FairseqBMUFConfig(FairseqDataclass):
@@ -921,6 +925,10 @@ class GenerationConfig(FairseqDataclass):
     temperature: float = field(
         default=1.0,
         metadata={"help": "temperature for generation"},
+    )
+    datasize_t: float = field(
+        default=5.0,
+        metadata={"help": "temperature for controlling datasize sampling"},
     )
     diverse_beam_groups: int = field(
         default=-1,
