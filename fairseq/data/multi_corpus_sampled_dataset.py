@@ -9,11 +9,14 @@ from typing import Callable, Dict, List
 import numpy as np
 
 from . import FairseqDataset
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def uniform_sampler(x):
+def uniform_sampler(x, p=None):
     # Sample from uniform distribution
-    return np.random.choice(x, 1).item()
+    return np.random.choice(x, 1, p=p).item()
 
 
 class MultiCorpusSampledDataset(FairseqDataset):
@@ -29,9 +32,13 @@ class MultiCorpusSampledDataset(FairseqDataset):
     """
 
     def __init__(
-        self,
-        datasets: Dict[str, FairseqDataset],
-        sampling_func: Callable[[List], int] = None,
+            self,
+            datasets: Dict[str, FairseqDataset],
+            sampling_func: Callable[[List], int] = None,
+            sample_instance=False,
+            split=None,
+            datasize_t=None,
+            alpha_p=0,
     ):
         super().__init__()
         assert isinstance(datasets, OrderedDict)
@@ -39,6 +46,9 @@ class MultiCorpusSampledDataset(FairseqDataset):
         if sampling_func is None:
             sampling_func = uniform_sampler
         self.sampling_func = sampling_func
+        self.p = None
+        self.sample_instance = sample_instance
+        self.split = split
 
         self.total_num_instances = 0
         for _, dataset in datasets.items():
@@ -46,6 +56,15 @@ class MultiCorpusSampledDataset(FairseqDataset):
             self.total_num_instances += len(dataset)
 
         self._ordered_indices = None
+        if datasize_t is not None:
+            self.p = np.array([len(data) ** (1 / datasize_t) for data in datasets.values()])
+            self.p = self.p / np.sum(self.p)
+            self.datasize_p = self.p
+            logger.info("data sampling with temperature {} is {}".format(datasize_t, str(self.p)))
+        else:
+            self.p = np.array([1 for _ in range(len(datasets))])
+            self.p = self.p / np.sum(self.p)
+        self.alpha_p = alpha_p
 
     def __len__(self):
         """
@@ -76,7 +95,7 @@ class MultiCorpusSampledDataset(FairseqDataset):
         created an ordering for this and all underlying datasets.
         """
         assert (
-            self._ordered_indices is not None
+                self._ordered_indices is not None
         ), "Must call MultiCorpusSampledDataset.ordered_indices() first"
         mapped_index = index % len(self.datasets[key])
         return self._ordered_indices[key][mapped_index]
@@ -94,6 +113,38 @@ class MultiCorpusSampledDataset(FairseqDataset):
             ]
         )
 
+    def get_sample_with_key(self, key, num=8, max_count=1200):
+        """
+        Get some samples with a given key
+        """
+        print("I came to get_sample_with_key")
+        dataset = self.datasets[key]
+        sample_indices = np.random.choice(np.arange(len(dataset)), size=num)
+        samples, count = [], 0
+        for i in sample_indices:
+            samples.append(dataset[i])
+            count += dataset.num_tokens(i)
+            if count >= max_count: break
+
+        return OrderedDict([
+            (key, self.datasets[key].collater(samples))
+        ])
+
+    def update_sampling_distribution(self, logits):
+        # print(logits)
+        for i, l in enumerate(logits):
+            if logits[i] < 0:
+                logits[i] = 0
+        if sum(logits) == 0:
+            logits = [0.1 for _ in range(len(logits))]
+        p = np.array(logits) / sum(logits)
+        if self.alpha_p > 0:
+            # self.p = self.alpha_p * self.datasize_p + (1-self.alpha_p) * p
+            self.p = np.array([i * j for i, j in zip(self.datasize_p, p)])
+            self.p = self.p / np.sum(self.p)
+        else:
+            self.p = p
+
     def collater(self, samples: List[Dict]):
         """
         Generate a mini-batch for this dataset.
@@ -104,10 +155,21 @@ class MultiCorpusSampledDataset(FairseqDataset):
         """
         if len(samples) == 0:
             return None
-
-        selected_key = self.sampling_func(list(self.datasets.keys()))
-        selected_samples = [sample[selected_key] for sample in samples]
-        return self.datasets[selected_key].collater(selected_samples)
+        if self.sample_instance:
+            collated_samples = OrderedDict([(key, []) for key in self.datasets.keys()])
+            for sample in samples:
+                selected_key = self.sampling_func(list(self.datasets.keys()), self.p)
+                collated_samples[selected_key].append(sample[selected_key])
+            for key in collated_samples.keys():
+                if len(collated_samples[key]) > 0:
+                    collated_samples[key] = self.datasets[key].collater(collated_samples[key])
+            return collated_samples
+        else:
+            selected_key = self.sampling_func(list(self.datasets.keys()), self.p)
+            selected_samples = [sample[selected_key] for sample in samples]
+            return OrderedDict([
+                (selected_key, self.datasets[selected_key].collater(selected_samples))
+            ])
 
     def num_tokens(self, index: int):
         """
@@ -120,16 +182,13 @@ class MultiCorpusSampledDataset(FairseqDataset):
             for key, dataset in self.datasets.items()
         )
 
-    def size(self, index: int):
-        """
-        Return an example's size as a float or tuple. Here we return the max
-        across all underlying datasets. This value is used when filtering a
-        dataset with max-positions.
-        """
-        return max(
-            dataset.size(self._map_index_to_dataset(key, index))
+    def size(self, index):
+        """Return an example's size as a float or tuple. This value is used when
+        filtering a dataset with ``--max-positions``."""
+        return {
+            key: dataset.size(self._map_index_to_dataset(key, index))
             for key, dataset in self.datasets.items()
-        )
+        }
 
     @property
     def supports_prefetch(self):
@@ -143,10 +202,3 @@ class MultiCorpusSampledDataset(FairseqDataset):
             dataset.prefetch(
                 [self._map_index_to_dataset(key, index) for index in indices]
             )
-
-    @property
-    def supports_fetch_outside_dataloader(self):
-        return all(
-            self.datasets[key].supports_fetch_outside_dataloader
-            for key in self.datasets
-        )

@@ -14,7 +14,7 @@ from fairseq import metrics
 from fairseq import utils
 from fairseq.data import Dictionary
 from fairseq.data import LanguagePairDataset
-from fairseq.data import RoundRobinZipDatasets
+from fairseq.data import RoundRobinZipDatasets, MultiCorpusSampledDataset
 from fairseq.data import TransformEosLangPairDataset
 from fairseq.models import FairseqMultiModel
 from fairseq.tasks.translation import load_langpair_dataset
@@ -93,11 +93,26 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                                  'language token. (src/tgt)')
         parser.add_argument('--decoder-langtok', action='store_true',
                             help='replace beginning-of-sentence in target sentence with target language token')
+        parser.add_argument('--dataset-type', default="round_robin", type=str,
+                            help='[round_robin|multi|tcs]')
+        parser.add_argument('--datasize-t', default=5.0, type=float,
+                            help='sampling temperature')
+        parser.add_argument('--alpha-p', default=0, type=float,
+                            help='sampling temperature')
+        parser.add_argument('--sample_instance', default=False, type=bool,
+                            help='for the temperature model')
+        parser.add_argument('--split', default=None, type=str,
+                            help='train|valid|test')
         # fmt: on
 
     def __init__(self, args, dicts, training):
         super().__init__(args)
+        self.dataset_type = args.dataset_type
+        self.datasize_t = args.datasize_t
+        self.alpha_p = args.alpha_p
         self.dicts = dicts
+        self.sample_instance = args.sample_instance
+        self.split = args.split
         self.training = training
         if training:
             self.lang_pairs = args.lang_pairs
@@ -241,17 +256,29 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                 tgt_lang=tgt,
             )
 
-        self.datasets[split] = RoundRobinZipDatasets(
-            OrderedDict(
-                [
+        if self.dataset_type == 'round_robin' or split != 'train':
+            # Round Robin is a collection (dictionary) of multiple LanguagePairDataset(=one-bilingual) classes.
+            # Languages are not mixed together, they serve as different language pair entities
+            self.datasets[split] = RoundRobinZipDatasets(
+                OrderedDict(
+                    [
+                        (lang_pair, language_pair_dataset(lang_pair))
+                        for lang_pair in self.lang_pairs
+                    ]
+                ),
+                eval_key=None if self.training else "%s-%s" % (self.args.source_lang, self.args.target_lang)
+            )
+        elif self.dataset_type == 'multi':
+            self.datasets[split] = MultiCorpusSampledDataset(
+                OrderedDict([
                     (lang_pair, language_pair_dataset(lang_pair))
                     for lang_pair in self.lang_pairs
-                ]
-            ),
-            eval_key=None
-            if self.training
-            else "%s-%s" % (self.args.source_lang, self.args.target_lang),
-        )
+                ]),
+                sample_instance=self.args.sample_instance,
+                split=split,
+                datasize_t=self.args.datasize_t,
+                alpha_p=self.args.alpha_p,
+            )
 
     def build_dataset_for_inference(self, src_tokens, src_lengths, constraints=None):
         if constraints is not None:
@@ -325,6 +352,7 @@ class MultilingualTranslationTask(LegacyFairseqTask):
     def _per_lang_pair_train_loss(
             self, lang_pair, model, update_num, criterion, sample, optimizer, ignore_grad
     ):
+        # Calling criterion for negative log likelihood.
         loss, sample_size, logging_output = criterion(
             model.models[lang_pair], sample[lang_pair]
         )
@@ -343,7 +371,7 @@ class MultilingualTranslationTask(LegacyFairseqTask):
         curr_lang_pairs = [
             lang_pair
             for lang_pair in self.model_lang_pairs
-            if sample[lang_pair] is not None and len(sample[lang_pair]) != 0
+            if lang_pair in sample and sample[lang_pair] is not None and len(sample[lang_pair]) != 0
         ]
 
         for idx, lang_pair in enumerate(curr_lang_pairs):
@@ -368,6 +396,7 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                     optimizer,
                     ignore_grad,
                 )
+            # Compute loss for each language separately, and aggregate over all languages (all losses)
             agg_loss += loss.detach().item()
             # TODO make summing of the sample sizes configurable
             agg_sample_size += sample_size
