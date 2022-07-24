@@ -126,9 +126,9 @@ class Trainer(object):
         for shared_param in shared_params:
             ref = _get_module_by_path(self._model, shared_param[0])
             for path in shared_param[1:]:
-                logger.info(
-                    "detected shared parameter: {} <- {}".format(shared_param[0], path)
-                )
+                # logger.info(
+                #     "detected shared parameter: {} <- {}".format(shared_param[0], path)
+                # )
                 _set_module_by_path(self._model, path, ref)
 
         self._dummy_batch = None  # indicates we don't have a dummy batch at first
@@ -821,6 +821,7 @@ class Trainer(object):
             try:
                 with maybe_no_sync():
                     # forward and backward
+                    # Feed the sample to the network, and compute loss, etc
                     loss, sample_size_i, logging_output = self.task.train_step(
                         sample=sample,
                         model=self.model,
