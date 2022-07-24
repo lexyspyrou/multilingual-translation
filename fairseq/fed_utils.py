@@ -7,6 +7,7 @@ import numpy as np
 import torch
 import ujson as json
 from tqdm import tqdm
+import torch
 
 from fairseq import distributed_utils
 from fairseq import utils
@@ -14,6 +15,7 @@ from fairseq.data.indexed_dataset import IndexedCachedDataset
 from fairseq.data.indexed_dataset import IndexedDatasetBuilder
 # We need to setup root logger before importing any fairseq libraries.
 from fairseq.dataclass.configs import FairseqConfig
+from fairseq.distributed.utils import get_global_group
 
 logging.basicConfig(
     format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
@@ -34,7 +36,7 @@ def dist2topk(out_dist, k):
 
 
 def output2topk(output, k):
-    topk_outp, topk_idx = torch.topk(output, k, dim=-1)
+    topk_outp, topk_idx = torch.topk(output, k, dim=-1)  # (B, T, k), where T: target sequence length
     topk_outp = topk_outp.view(-1, k)  # (B x T) x k
     topk_idx = topk_idx.view(-1, k)  # (B x T) x k
     return topk_idx, topk_outp
@@ -111,74 +113,105 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
             trainer.get_model().max_positions(),
         ),
         ignore_invalid_inputs=cfg.dataset.skip_invalid_size_inputs_valid_test,
+        # Defines the number examples fetched at each batch iteration per language
         required_batch_size_multiple=8,
         seed=cfg.common.seed,
         num_shards=cfg.distributed_training.distributed_world_size,
         shard_id=cfg.distributed_training.distributed_rank,
     ).next_epoch_itr(shuffle=False)
-
-    logger.info(f"ITR is being set")
-
-    outputs = [None for _ in range(len(task.dataset('train')))]
+    outputs = {lang_pair: [None for _ in range(task.dataset('train').datasets[lang_pair].__len__())]
+               for lang_pair in task.lang_pairs}
+    # This was equal to the number of eng-rus sentences (Investigate).
     for sample in tqdm(itr, mininterval=5):
-        with torch.no_grad():
-            if sample is None or len(sample) == 0:
-                continue
-            sample = utils.move_to_cuda(sample)
+        for lang_pair, lang_pair_values in sample.items():
+            with torch.no_grad():
+                if lang_pair_values is None or len(lang_pair_values) == 0:
+                    continue
+                lang_pair_values = utils.move_to_cuda(lang_pair_values)
 
-            bs, srclen = sample['net_input']['src_tokens'].shape
-            output = trainer.model(**sample['net_input'])[0].detach()
-            non_padding_mask = sample['target'].ne(task.target_dictionary.pad()).cpu()
-            _, tgtlen = sample['target'].shape
-            topk_idx, topk_v = output2topk(output, cfg.checkpoint.distill_topk)
-            topk_x_shape = (bs, tgtlen, cfg.checkpoint.distill_topk)
-            topk_idx, topk_v = topk_idx.view(*topk_x_shape).cpu().numpy(), topk_v.view(*topk_x_shape).cpu().numpy()
-            non_padding_mask = non_padding_mask.view(*topk_x_shape[:2]).cpu().numpy().astype(bool)
-            for b in range(bs):
-                outputs[sample['id'][b].item()] = \
-                    topk_idx[b, non_padding_mask[b]].tolist(), \
-                    topk_v[b, non_padding_mask[b]].tolist()
+                batch_size, src_len = lang_pair_values['net_input']['src_tokens'].shape
+                # tgt_len the length of the target sentence in the current batch per language (padded if necessary)
+                _, tgt_len = lang_pair_values['target'].shape
+                # Pass all the examples (in parallel) from the Transformer network.
+                output = trainer.model.models[lang_pair](**lang_pair_values['net_input'])[0].detach()
+
+                non_padding_mask = lang_pair_values['target'].ne(task.target_dictionary.pad()).cpu()
+                top_k_idx, top_k_v = output2topk(output, cfg.checkpoint.distill_topk)
+                top_k_x_shape = (batch_size, tgt_len, cfg.checkpoint.distill_topk)
+                # Asserted that both vectors have the expected shape (B, T, k)
+                top_k_idx, top_k_v = top_k_idx.view(*top_k_x_shape).cpu().numpy(), top_k_v.view(
+                    *top_k_x_shape).cpu().numpy()
+                non_padding_mask = non_padding_mask.view(*top_k_x_shape[:2]).cpu().numpy().astype(bool)
+                # logger.info(f"non_padding_mask: {non_padding_mask.shape}")
+                for example_id in range(batch_size):
+                    outputs[lang_pair][lang_pair_values['id'][example_id].item()] = \
+                        tuple((top_k_idx[example_id, non_padding_mask[example_id]].tolist(),
+                               top_k_v[example_id, non_padding_mask[example_id]].tolist()))
+    for lang_pair in task.lang_pairs:
+        logger.info(
+            f"{outputs[lang_pair][0][0].__len__(), outputs[lang_pair][0][1].__len__()}")
     return outputs
 
 
 def save_expert_outputs(cfg: FairseqConfig, task, trainer):
     logger.info("| Start saving expert outputs..")
-    expert_outputs = gen_outputs(cfg, task, trainer)
+
+    # We adapted and fixed this function.expert_outputs = Dict[lang_pair] -> list
+    expert_outputs_dict = gen_outputs(cfg, task, trainer)
+
     output_path = os.path.join(cfg.checkpoint.save_dir,
                                'train_output.json.{}'.format(cfg.distributed_training.distributed_rank))
-    json.dump(expert_outputs, open(output_path, 'w'))
-    # distributed_utils.barrier(cfg, 'save_expert_outputs')
+    logger.info(f" Saving results to path: {output_path}")
+
+    json.dump(expert_outputs_dict, open(output_path, 'w'))
+
+    # Wait for all the processes to complete
+    if torch.distributed.is_initialized():
+        torch.distributed.barrier(get_global_group())
+    logger.info("All processes have now finished computing the probabilities.")
+
+    # The main process will aggregate the results into 1 dataset.
     if distributed_utils.is_master(cfg.distributed_training):
-        expert_outputs_ = []
-        val_bleu_path1 = os.path.join(cfg.checkpoint.save_dir, 'val_bleu.json')
-        # FIXME was cfg.data[0]
-        val_bleu_path2 = os.path.join(cfg.checkpoint.save_dir,
-                                      'expert_bleu_{}_{}.json'.format(cfg.task.source_lang, cfg.task.target_lang))
-        os.system('cp {} {}'.format(val_bleu_path1, val_bleu_path2))
+        aggregated_expert_outputs_ = {lang_pair: [] for lang_pair in task.lang_pairs}
+        for worker_id in range(cfg.distributed_training.distributed_world_size):
 
-        for i in range(cfg.distributed_training.distributed_world_size):
-            output_path = os.path.join(cfg.checkpoint.save_dir, 'train_output.json.{}'.format(i))
-            expert_outputs_.append(json.load(open(output_path, 'r')))
-            try:
-                os.remove(output_path)
-            except:
-                pass
-        for j in range(len(expert_outputs_[0])):
-            for i in range(cfg.distributed_training.distributed_world_size):
-                if expert_outputs_[i][j] is not None:
-                    expert_outputs[j] = expert_outputs_[i][j]
-                    break
-            if j > 20: break
-            assert expert_outputs[j] is not None
+            saved_output_path = os.path.join(cfg.checkpoint.save_dir, 'train_output.json.{}'.format(worker_id))
+            logger.info(f'Loading expert output from worker_id {worker_id} and path {saved_output_path}')
+            saved_experts_dict = json.load(open(saved_output_path, 'r'))
 
-        path = os.path.join(cfg.checkpoint.save_dir,
-                            '{}_{}_top_{}_idx'.format(cfg.task.source_lang, cfg.task.target_lang,
-                                                      cfg.checkpoint.distill_topk))
-        TeacherOutputDataset.save_bin(path, [o[0] for o in expert_outputs], np.int32)
+            # Each language pair is key. The value is a list containing distributed_world_size lists.
+            # Each of those lists, is a list of number of examples of that language pairs.
+            # However, many indexes will be invalid (None), because that example didn't belong to the partition
+            # that specific worker. Each example is
+            # only processed by 1 worker (Remember we want to parallelize the work)
+            for lang_pair, top_k_tuples in saved_experts_dict.items():
+                aggregated_expert_outputs_[lang_pair].append(top_k_tuples)
 
-        path = os.path.join(cfg.checkpoint.save_dir,
-                            '{}_{}_top_{}_prob'.format(cfg.task.source_lang, cfg.task.target_lang,
-                                                       cfg.checkpoint.distill_topk))
-        TeacherOutputDataset.save_bin(path, [o[1] for o in expert_outputs], np.float64)
+        for lang_pair in task.lang_pairs:
+            for lang_example_idx in range(len(aggregated_expert_outputs_[lang_pair][0])):
+                for worker_id in range(cfg.distributed_training.distributed_world_size):
+                    if aggregated_expert_outputs_[lang_pair][worker_id][lang_example_idx] is not None:
+                        expert_outputs_dict[lang_pair][lang_example_idx] = \
+                            aggregated_expert_outputs_[lang_pair][worker_id][lang_example_idx]
+                        break
+                if expert_outputs_dict[lang_pair][lang_example_idx] is None:
+                    logger.warning(
+                        f'{lang_pair}: Skipping sentence: {lang_example_idx}  due to '
+                        f'invalid sizes - max_positions')
+                    expert_outputs_dict[lang_pair][lang_example_idx] = ([], [])
 
-    logger.info("| Save expert@{}_{}".format(cfg.task.source_lang, cfg.task.target_lang))
+        for lang_pair in task.lang_pairs:
+            src, tgt = lang_pair.split("-")
+            path = os.path.join(cfg.checkpoint.save_dir,
+                                '{}_{}_top_{}_idx'.format(src, tgt,
+                                                          cfg.checkpoint.distill_topk))
+            TeacherOutputDataset.save_bin(path, [word_idx for word_idx, word_proba in expert_outputs_dict[lang_pair]],
+                                          np.int32)
+
+            path = os.path.join(cfg.checkpoint.save_dir,
+                                '{}_{}_top_{}_prob'.format(src, tgt,
+                                                           cfg.checkpoint.distill_topk))
+            TeacherOutputDataset.save_bin(path, [word_idx for word_idx, word_proba in expert_outputs_dict[lang_pair]],
+                                          np.float64)
+
+            logger.info("| Saved expert@{}_{}".format(src, tgt))
