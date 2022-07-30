@@ -57,15 +57,13 @@ class FairseqCriterion(_Loss):
 
             if p.name == "task":
                 init_args["task"] = task
-                logger.info("Task is", task)
+                logger.info(f"Task is: {task}")
             elif p.name == "cfg":
                 init_args["cfg"] = cfg
-                logger.info("Cfg args is", cfg)
+                logger.info(f"Cfg is: {cfg}")
             elif hasattr(cfg, p.name):
                 init_args[p.name] = getattr(cfg, p.name)
-                logger.info("Has attribute", init_args[p.name])
             elif p.default != p.empty:
-                logger.info("Wem will use default values")
                 pass  # we'll use the default value
             else:
                 raise NotImplementedError(
