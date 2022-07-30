@@ -12,6 +12,7 @@ import torch
 from fairseq import distributed_utils
 from fairseq import utils
 from fairseq.data.indexed_dataset import IndexedCachedDataset
+from fairseq.data.indexed_dataset import IndexedCachedDatasetLegacy
 from fairseq.data.indexed_dataset import IndexedDatasetBuilder
 # We need to setup root logger before importing any fairseq libraries.
 from fairseq.dataclass.configs import FairseqConfig
@@ -63,9 +64,7 @@ class TeacherOutputDatasetBuilder(IndexedDatasetBuilder):
         self.dim_offsets.append(self.dim_offsets[-1] + len(data.shape))
 
 
-# class TeacherOutputDataset(IndexedCachedDatasetLegacy):
-
-class TeacherOutputDataset(IndexedCachedDataset):
+class TeacherOutputDataset(IndexedCachedDatasetLegacy):
     dtype2size = {
         float: 8,
         int: 4,
@@ -105,8 +104,10 @@ class TeacherOutputDataset(IndexedCachedDataset):
 
 
 def gen_outputs(cfg: FairseqConfig, task, trainer):
+    # Set the model to eval model, because its outputs will be used to train another model.
     trainer.model.eval()
     itr = task.get_batch_iterator(
+        # PAY ATTENTION THAT WE FEED THE TRAINING DATA.
         dataset=task.dataset('train'),
         max_tokens=cfg.dataset.max_tokens,
         max_sentences=cfg.dataset.max_tokens_valid,
@@ -134,12 +135,23 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
                 if lang_pair_values is None or len(lang_pair_values) == 0:
                     continue
                 lang_pair_values = utils.move_to_cuda(lang_pair_values)
-
+                src, tgt = lang_pair.split('-')
                 batch_size, src_len = lang_pair_values['net_input']['src_tokens'].shape
                 # tgt_len the length of the target sentence in the current batch per language (padded if necessary)
                 _, tgt_len = lang_pair_values['target'].shape
                 # Pass all the examples (in parallel) from the Transformer network.
-                output = trainer.model.models[lang_pair](**lang_pair_values['net_input'])[0].detach()
+
+                # For each language pair, set the language-specific configs
+                # ( e.g which encoder/decoder layer to select for this specific pair)
+                src_lang_idx = trainer.task.src_lang_idx_dict[src]
+                tgt_lang_idx = trainer.task.tgt_lang_idx_dict[tgt]
+
+                if trainer.task.encoder_latent_layer:
+                    trainer.model.models[lang_pair].encoder.set_lang_idx(src_lang_idx)
+                if trainer.task.decoder_latent_layer:
+                    trainer.model.models[lang_pair].decoder.set_lang_idx(tgt_lang_idx)
+
+                output = trainer.model.models[lang_pair].forward(**lang_pair_values['net_input'])[0].detach()
 
                 non_padding_mask = lang_pair_values['target'].ne(task.target_dictionary.pad()).cpu()
                 top_k_idx, top_k_v = output2topk(output, cfg.distillation.distill_topk)
@@ -154,8 +166,8 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
                         tuple((top_k_idx[example_id, non_padding_mask[example_id]].tolist(),
                                top_k_v[example_id, non_padding_mask[example_id]].tolist()))
     for lang_pair in task.lang_pairs:
-        print(f"Language pair: {lang_pair}")
-        print(f"outputs length: {len(outputs[lang_pair])}")
+        logger.info(f"Language pair: {lang_pair}")
+        logger.info(f"outputs length: {len(outputs[lang_pair])}")
     return outputs
 
 

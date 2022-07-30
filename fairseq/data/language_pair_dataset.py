@@ -9,19 +9,22 @@ import numpy as np
 import torch
 from fairseq.data import FairseqDataset, data_utils
 
-
 logger = logging.getLogger(__name__)
+
+TOP_K_IDX = 'top_k_idx'
+TOP_K_PROB = 'top_k_prob'
 
 
 def collate(
-    samples,
-    pad_idx,
-    eos_idx,
-    left_pad_source=True,
-    left_pad_target=False,
-    input_feeding=True,
-    pad_to_length=None,
-    pad_to_multiple=1,
+        samples,
+        pad_idx,
+        eos_idx,
+        left_pad_source=True,
+        left_pad_target=False,
+        input_feeding=True,
+        pad_to_length=None,
+        pad_to_multiple=1,
+        distill_topk=4
 ):
     if len(samples) == 0:
         return {}
@@ -41,8 +44,8 @@ def collate(
         if alignment is None or len(alignment) == 0:
             return False
         if (
-            alignment[:, 0].max().item() >= src_len - 1
-            or alignment[:, 1].max().item() >= tgt_len - 1
+                alignment[:, 0].max().item() >= src_len - 1
+                or alignment[:, 1].max().item() >= tgt_len - 1
         ):
             logger.warning("alignment size mismatch found, skipping alignment!")
             return False
@@ -159,9 +162,28 @@ def collate(
         max_len = max(lens)
         constraints = torch.zeros((len(samples), max(lens))).long()
         for i, sample in enumerate(samples):
-            constraints[i, 0 : lens[i]] = samples[i].get("constraints")
+            constraints[i, 0: lens[i]] = samples[i].get("constraints")
         batch["constraints"] = constraints.index_select(0, sort_order)
 
+    # ADDED FOR KD
+    if TOP_K_IDX in samples[0] and samples[0][TOP_K_IDX] is not None:
+        sizes = max(v[TOP_K_IDX].size(0) for v in samples), distill_topk
+        teacher_outputs = samples[0][TOP_K_IDX][0].new(len(samples), *sizes).fill_(pad_idx).long(), \
+                          samples[0][TOP_K_PROB][0].new(len(samples), *sizes).fill_(pad_idx)
+
+        def copy_tensor(src, dst):
+            dst.copy_(src)
+
+        for i, v in enumerate(samples):
+            # T * K
+            copy_tensor(v[TOP_K_IDX].long()[:, :distill_topk],
+                        teacher_outputs[0][i, :len(v[TOP_K_IDX].long()), :distill_topk])
+            copy_tensor(v[TOP_K_PROB][:, :distill_topk], teacher_outputs[1][i, :len(v[TOP_K_PROB]), :distill_topk])
+
+        batch['teacher_output'] = teacher_outputs[0].index_select(0, sort_order), \
+                                  teacher_outputs[1].index_select(0, sort_order)
+        torch.FloatTensor([s['alpha'] for s in samples]).view(-1, 1).expand(-1, target.shape[1])
+        batch['alpha'] = torch.FloatTensor([s['alpha'] for s in samples]).view(-1, 1).expand(-1, target.shape[1])
     return batch
 
 
@@ -205,27 +227,32 @@ class LanguagePairDataset(FairseqDataset):
     """
 
     def __init__(
-        self,
-        src,
-        src_sizes,
-        src_dict,
-        tgt=None,
-        tgt_sizes=None,
-        tgt_dict=None,
-        left_pad_source=True,
-        left_pad_target=False,
-        shuffle=True,
-        input_feeding=True,
-        remove_eos_from_source=False,
-        append_eos_to_target=False,
-        align_dataset=None,
-        constraints=None,
-        append_bos=False,
-        eos=None,
-        num_buckets=0,
-        src_lang_id=None,
-        tgt_lang_id=None,
-        pad_to_multiple=1,
+            self,
+            src,
+            src_sizes,
+            src_dict,
+            tgt=None,
+            tgt_sizes=None,
+            tgt_dict=None,
+            left_pad_source=True,
+            left_pad_target=False,
+            shuffle=True,
+            input_feeding=True,
+            remove_eos_from_source=False,
+            append_eos_to_target=False,
+            align_dataset=None,
+            constraints=None,
+            append_bos=False,
+            eos=None,
+            num_buckets=0,
+            src_lang_id=None,
+            tgt_lang_id=None,
+            pad_to_multiple=1,
+            # --  Added for KD -- #
+            experts_top_k_prob=None,
+            experts_top_k_idx=None,
+            kd_alpha=0.9,
+            is_train=False
     ):
         if tgt_dict is not None:
             assert src_dict.pad() == tgt_dict.pad()
@@ -235,6 +262,7 @@ class LanguagePairDataset(FairseqDataset):
             assert len(src) == len(
                 tgt
             ), "Source and target must contain the same number of examples"
+        self.is_train = is_train
         self.src = src
         self.tgt = tgt
         self.src_sizes = np.array(src_sizes)
@@ -255,7 +283,7 @@ class LanguagePairDataset(FairseqDataset):
         self.align_dataset = align_dataset
         if self.align_dataset is not None:
             assert (
-                self.tgt_sizes is not None
+                    self.tgt_sizes is not None
             ), "Both source and target needed when alignments are provided"
         self.constraints = constraints
         self.append_bos = append_bos
@@ -297,6 +325,9 @@ class LanguagePairDataset(FairseqDataset):
         else:
             self.buckets = None
         self.pad_to_multiple = pad_to_multiple
+        self.experts_top_k_idx = experts_top_k_idx  # added for KD
+        self.experts_top_k_prob = experts_top_k_prob  # added for KD
+        self.kd_alpha = kd_alpha  # added for KD
 
     def get_batch_shapes(self):
         return self.buckets
@@ -329,13 +360,26 @@ class LanguagePairDataset(FairseqDataset):
 
         example = {
             "id": index,
-            "source": src_item,
-            "target": tgt_item,
+            "source": src_item,  # source sentence - tensor containing the word idxs
+            "target": tgt_item,  # target sentence - tensor containing the tgt word idxs (ground truths)
         }
         if self.align_dataset is not None:
             example["alignment"] = self.align_dataset[index]
         if self.constraints is not None:
             example["constraints"] = self.constraints[index]
+        if self.experts_top_k_idx and self.is_train:
+            # How should we deal with example that were skipped ? We currently set them to a an emtpy tuple ([],[])
+
+            assert self.experts_top_k_idx[index].shape[0] == self.tgt[index].shape[0], (
+                self.experts_top_k_idx[index].shape, self.tgt[index].shape)
+
+            example[TOP_K_IDX] = self.experts_top_k_idx[index]
+            example[TOP_K_PROB] = self.experts_top_k_prob[index] if self.tgt is not None else None
+            # TODO: We probably need to update this. See get_alpha() in universal_dataset.py
+            # if self.expert_scores[self.dataset_ids[index]] is None:
+            example['alpha'] = self.kd_alpha  # 'fix' self.DEFAULT_ALPHA
+            # else:
+            #     example['alpha'] = self.kd_alpha  # (self.dataset_ids[index])
         return example
 
     def __len__(self):
