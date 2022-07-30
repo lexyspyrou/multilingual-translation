@@ -96,8 +96,6 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                             help='replace beginning-of-sentence in target sentence with target language token')
         parser.add_argument('--dataset-type', default="round_robin", type=str,
                             help='[round_robin|multi|tcs]')
-        parser.add_argument('--datasize-t', default=5.0, type=float,
-                            help='sampling temperature')
         parser.add_argument('--alpha-p', default=0, type=float,
                             help='sampling temperature')
         parser.add_argument('--sample_instance', default=False, type=bool,
