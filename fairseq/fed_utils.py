@@ -63,6 +63,8 @@ class TeacherOutputDatasetBuilder(IndexedDatasetBuilder):
         self.dim_offsets.append(self.dim_offsets[-1] + len(data.shape))
 
 
+# class TeacherOutputDataset(IndexedCachedDatasetLegacy):
+
 class TeacherOutputDataset(IndexedCachedDataset):
     dtype2size = {
         float: 8,
@@ -114,15 +116,19 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
         ),
         ignore_invalid_inputs=cfg.dataset.skip_invalid_size_inputs_valid_test,
         # Defines the number examples fetched at each batch iteration per language
-        required_batch_size_multiple=8,
+        # required_batch_size_multiple=8,
         seed=cfg.common.seed,
         num_shards=cfg.distributed_training.distributed_world_size,
         shard_id=cfg.distributed_training.distributed_rank,
     ).next_epoch_itr(shuffle=False)
+    # We initialize the outputs as a dictionary with lang pair as keys and None values
+    # for the size of the language pair (examples)
     outputs = {lang_pair: [None for _ in range(task.dataset('train').datasets[lang_pair].__len__())]
                for lang_pair in task.lang_pairs}
     # This was equal to the number of eng-rus sentences (Investigate).
-    for sample in tqdm(itr, mininterval=5):
+
+    for sample in tqdm(itr):
+        if not sample: continue
         for lang_pair, lang_pair_values in sample.items():
             with torch.no_grad():
                 if lang_pair_values is None or len(lang_pair_values) == 0:
@@ -136,8 +142,8 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
                 output = trainer.model.models[lang_pair](**lang_pair_values['net_input'])[0].detach()
 
                 non_padding_mask = lang_pair_values['target'].ne(task.target_dictionary.pad()).cpu()
-                top_k_idx, top_k_v = output2topk(output, cfg.checkpoint.distill_topk)
-                top_k_x_shape = (batch_size, tgt_len, cfg.checkpoint.distill_topk)
+                top_k_idx, top_k_v = output2topk(output, cfg.distillation.distill_topk)
+                top_k_x_shape = (batch_size, tgt_len, cfg.distillation.distill_topk)
                 # Asserted that both vectors have the expected shape (B, T, k)
                 top_k_idx, top_k_v = top_k_idx.view(*top_k_x_shape).cpu().numpy(), top_k_v.view(
                     *top_k_x_shape).cpu().numpy()
@@ -148,8 +154,8 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
                         tuple((top_k_idx[example_id, non_padding_mask[example_id]].tolist(),
                                top_k_v[example_id, non_padding_mask[example_id]].tolist()))
     for lang_pair in task.lang_pairs:
-        logger.info(
-            f"{outputs[lang_pair][0][0].__len__(), outputs[lang_pair][0][1].__len__()}")
+        print(f"Language pair: {lang_pair}")
+        print(f"outputs length: {len(outputs[lang_pair])}")
     return outputs
 
 
@@ -197,7 +203,7 @@ def save_expert_outputs(cfg: FairseqConfig, task, trainer):
                 if expert_outputs_dict[lang_pair][lang_example_idx] is None:
                     logger.warning(
                         f'{lang_pair}: Skipping sentence: {lang_example_idx}  due to '
-                        f'invalid sizes - max_positions')
+                        f'invalid size - max_positions')
                     expert_outputs_dict[lang_pair][lang_example_idx] = ([], [])
 
         for lang_pair in task.lang_pairs:
@@ -205,13 +211,13 @@ def save_expert_outputs(cfg: FairseqConfig, task, trainer):
             path = os.path.join(cfg.checkpoint.save_dir,
                                 '{}_{}_top_{}_idx'.format(src, tgt,
                                                           cfg.checkpoint.distill_topk))
-            TeacherOutputDataset.save_bin(path, [word_idx for word_idx, word_proba in expert_outputs_dict[lang_pair]],
+            TeacherOutputDataset.save_bin(path, [word_idx for word_idx, _ in expert_outputs_dict[lang_pair]],
                                           np.int32)
 
             path = os.path.join(cfg.checkpoint.save_dir,
                                 '{}_{}_top_{}_prob'.format(src, tgt,
                                                            cfg.checkpoint.distill_topk))
-            TeacherOutputDataset.save_bin(path, [word_idx for word_idx, word_proba in expert_outputs_dict[lang_pair]],
+            TeacherOutputDataset.save_bin(path, [word_proba for _, word_proba in expert_outputs_dict[lang_pair]],
                                           np.float64)
 
             logger.info("| Saved expert@{}_{}".format(src, tgt))
