@@ -10,6 +10,17 @@ from fairseq import metrics, utils
 from fairseq.dataclass import FairseqDataclass
 from fairseq.dataclass.utils import gen_parser_from_dataclass
 from torch.nn.modules.loss import _Loss
+import os
+import sys
+import logging
+
+logging.basicConfig(
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=os.environ.get("LOGLEVEL", "INFO").upper(),
+    stream=sys.stdout,
+)
+logger = logging.getLogger("fairseq_cli.train")
 
 
 class FairseqCriterion(_Loss):
@@ -34,9 +45,9 @@ class FairseqCriterion(_Loss):
         init_args = {}
         for p in inspect.signature(cls).parameters.values():
             if (
-                p.kind == p.POSITIONAL_ONLY
-                or p.kind == p.VAR_POSITIONAL
-                or p.kind == p.VAR_KEYWORD
+                    p.kind == p.POSITIONAL_ONLY
+                    or p.kind == p.VAR_POSITIONAL
+                    or p.kind == p.VAR_KEYWORD
             ):
                 # we haven't implemented inference for these argument types,
                 # but PRs welcome :)
@@ -46,11 +57,15 @@ class FairseqCriterion(_Loss):
 
             if p.name == "task":
                 init_args["task"] = task
+                logger.info("Task is", task)
             elif p.name == "cfg":
                 init_args["cfg"] = cfg
+                logger.info("Cfg args is", cfg)
             elif hasattr(cfg, p.name):
                 init_args[p.name] = getattr(cfg, p.name)
+                logger.info("Has attribute", init_args[p.name])
             elif p.default != p.empty:
+                logger.info("Wem will use default values")
                 pass  # we'll use the default value
             else:
                 raise NotImplementedError(
