@@ -559,7 +559,7 @@ def cli_main(
         logger.info(
             f"Started plasma server pid {server.server.pid} {cfg.common.plasma_path}"
         )
-    logger.info(f"Ensuring {cfg.checkpoint.save_teacher_output} is false when not set")
+    logger.info(f"Save_teacher_output is {cfg.checkpoint.save_teacher_output}")
 
     if args.profile:
         with torch.cuda.profiler.profile():
@@ -568,8 +568,8 @@ def cli_main(
     else:
         distributed_utils.call_main(cfg, main)
 
-    # if cfg.common.use_plasma_view:
-    #     server.server.kill()
+    if cfg.common.use_plasma_view:
+        server.server.kill()
 
 
 if __name__ == "__main__":
