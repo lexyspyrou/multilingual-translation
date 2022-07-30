@@ -18,6 +18,7 @@ from fairseq.data import RoundRobinZipDatasets, MultiCorpusSampledDataset
 from fairseq.data import TransformEosLangPairDataset
 from fairseq.models import FairseqMultiModel
 from fairseq.tasks.translation import load_langpair_dataset
+from fairseq.dataclass.configs import KnowledgeDistillationConfig
 
 from . import LegacyFairseqTask
 from . import register_task
@@ -103,13 +104,16 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                             help='for the temperature model')
         parser.add_argument('--split', default=None, type=str,
                             help='train|valid|test')
-        # fmt: on
 
     def __init__(self, args, dicts, training):
+        self.datasize_t = None
+        self.alpha_p = None
+        self.kd = KnowledgeDistillationConfig()
         super().__init__(args)
         self.dataset_type = args.dataset_type
-        self.datasize_t = args.datasize_t
-        self.alpha_p = args.alpha_p
+        if self.dataset_type == 'multi':
+            self.datasize_t = args.datasize_t
+            self.alpha_p = args.alpha_p
         self.dicts = dicts
         self.sample_instance = args.sample_instance
         self.split = args.split
@@ -231,8 +235,9 @@ class MultilingualTranslationTask(LegacyFairseqTask):
         assert len(paths) > 0
         data_path = paths[(epoch - 1) % len(paths)]
 
-        def language_pair_dataset(lang_pair):
+        def language_pair_dataset(lang_pair, kd_configs=None):
             src, tgt = lang_pair.split("-")
+
             langpair_dataset = load_langpair_dataset(
                 data_path,
                 split,
@@ -247,6 +252,7 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                 left_pad_target=self.args.left_pad_target,
                 max_source_positions=self.args.max_source_positions,
                 max_target_positions=self.args.max_target_positions,
+                kd_configs=kd_configs
             )
             return self.alter_dataset_langtok(
                 langpair_dataset,
@@ -256,13 +262,24 @@ class MultilingualTranslationTask(LegacyFairseqTask):
                 tgt_lang=tgt,
             )
 
+        kd_configs = None
+        is_distill = self.args.criterion == 'distill_label_smoothed_cross_entropy' and split == 'train'
+        logger.info(f"Training model with distillation? : {is_distill}")
+        # FIXME : doesn't read arguments from the bash script but instead uses the fixed values from KnowledgeDistillationConfig()
+        if is_distill:
+            kd_configs = {
+                'kd_alpha': self.kd.alpha,
+                'distill_topk': self.kd.distill_topk
+            }
+            logger.info(f"kd_config file is: {kd_configs}")
         if self.dataset_type == 'round_robin' or split != 'train':
             # Round Robin is a collection (dictionary) of multiple LanguagePairDataset(=one-bilingual) classes.
-            # Languages are not mixed together, they serve as different language pair entities
+            # Languages are not mixed together, they serve as different language pair entities.
+            # Correction: -> Datasets are mixed together in the corresponding collate function (or collator)
             self.datasets[split] = RoundRobinZipDatasets(
                 OrderedDict(
                     [
-                        (lang_pair, language_pair_dataset(lang_pair))
+                        (lang_pair, language_pair_dataset(lang_pair, kd_configs))
                         for lang_pair in self.lang_pairs
                     ]
                 ),
@@ -271,7 +288,7 @@ class MultilingualTranslationTask(LegacyFairseqTask):
         elif self.dataset_type == 'multi':
             self.datasets[split] = MultiCorpusSampledDataset(
                 OrderedDict([
-                    (lang_pair, language_pair_dataset(lang_pair))
+                    (lang_pair, language_pair_dataset(lang_pair, kd_configs))
                     for lang_pair in self.lang_pairs
                 ]),
                 sample_instance=self.args.sample_instance,

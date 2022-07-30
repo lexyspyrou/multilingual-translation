@@ -117,10 +117,11 @@ class MultilingualTranslationTaskLatentDepth(MultilingualTranslationTask):
     def train_step(
             self, sample, model, criterion, optimizer, update_num, ignore_grad=False
     ):
+        # Train on individual language pairs, using the definition of MultilingualTranslationTask.
         agg_loss, agg_sample_size, agg_logging_output = super().train_step(
             sample, model, criterion, optimizer, update_num, ignore_grad
         )
-        # compute auxiliary loss from layere sparsity, based on all samples from all languages
+        # compute auxiliary loss from layer sparsity, based on all samples from all languages
         if hasattr(self, "sparsity_loss") and self.sparsity_loss.is_valid(update_num):
             sparsity_loss = 0
             if self.encoder_latent_layer:
