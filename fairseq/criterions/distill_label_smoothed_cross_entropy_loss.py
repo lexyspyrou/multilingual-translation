@@ -9,36 +9,51 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn.functional as F
-
-from fairseq import utils
+import math
+from dataclasses import dataclass, field
+import torch
+from fairseq import metrics, utils
 from fairseq.criterions import register_criterion
-from fairseq.criterions.label_smoothed_cross_entropy import LabelSmoothedCrossEntropyCriterion
-from fairseq.criterions.label_smoothed_cross_entropy import LabelSmoothedCrossEntropyCriterionConfig
+from fairseq.criterions.label_smoothed_cross_entropy import (
+    LabelSmoothedCrossEntropyCriterion,
+    LabelSmoothedCrossEntropyCriterionConfig,
+)
 
 
 @dataclass
-class DistillLabelSmoothedCrossEntropyCriterionConfig(
-    LabelSmoothedCrossEntropyCriterionConfig
-):
+class DistillLabelSmoothedCrossEntropyCriterionConfig(LabelSmoothedCrossEntropyCriterionConfig):
+    label_smoothing: float = field(
+        default=0.1,
+        metadata={"help": "epsilon for label smoothing, 0 means no label smoothing"},
+    )
+    distill_temp: float = field(
+        default=0.6,
+        metadata={"help": ""},
+    )
+    alpha_strategy: str = field(
+        default="fix", metadata={"help": "fix | threshold | adaptive"}
+    )
 
-    @staticmethod
-    def add_args(parser):
-        """Add criterion-specific arguments to the parser."""
-        parser.add_argument('--label-smoothing', default=0.1, type=float, metavar='D',
-                            help='epsilon for label smoothing, 0 means no label smoothing')
-        parser.add_argument('--distill-temp', default=0.6, type=float, metavar='D')
-        parser.add_argument('--alpha-strategy', default='fix', choices=['fix', 'threshold', 'adaptive'])
 
-
-@register_criterion('distill_label_smoothed_cross_entropy',
-                    dataclass=DistillLabelSmoothedCrossEntropyCriterionConfig,
-                    )
+@register_criterion(
+    "distill_label_smoothed_cross_entropy",
+    dataclass=DistillLabelSmoothedCrossEntropyCriterionConfig,
+)
 class DistillLabelSmoothedCrossEntropyCriterion(LabelSmoothedCrossEntropyCriterion):
 
-    def __init__(self, args, task):
-        super().__init__(args, task)
-        self.args = args
-        self.t = args.distill_temp
+    def __init__(self,
+                 task,
+                 sentence_avg,
+                 label_smoothing,
+                 ignore_prefix_size,
+                 report_accuracy,
+                 distill_temp,
+                 alpha_strategy):
+        super().__init__(
+            task, sentence_avg, label_smoothing, ignore_prefix_size, report_accuracy
+        )
+        self.distill_temp = distill_temp
+        self.alpha_strategy = alpha_strategy
 
     def forward(self, model, sample, reduce=True):
         """Compute the loss for the given sample.
@@ -61,7 +76,7 @@ class DistillLabelSmoothedCrossEntropyCriterion(LabelSmoothedCrossEntropyCriteri
 
         nll_prob = -lprobs.gather(dim=-1, index=target)
         smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
-        sample_size = sample['target'].size(0) if self.args.sentence_avg else sample['ntokens']
+        sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
 
         eps_i = self.eps / lprobs.size(-1)
 
@@ -99,6 +114,11 @@ class DistillLabelSmoothedCrossEntropyCriterion(LabelSmoothedCrossEntropyCriteri
             'ntokens': sample['ntokens'],
             'sample_size': sample_size,
         }
+
+        if self.report_accuracy:
+            n_correct, total = self.compute_accuracy(model, net_output, sample)
+            logging_output["n_correct"] = utils.item(n_correct.data)
+            logging_output["total"] = utils.item(total.data)
 
         return loss, sample_size, logging_output
 
