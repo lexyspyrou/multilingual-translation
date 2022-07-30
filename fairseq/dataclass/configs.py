@@ -1123,6 +1123,27 @@ class EMAConfig(FairseqDataclass):
 
 
 @dataclass
+class KnowledgeDistillationConfig(FairseqDataclass):
+    save_teacher_output: bool = field(
+        default=False, metadata={"help": "save output distributions of teacher model for KD"}
+    )
+
+    distill_topk: int = field(
+        default=4,
+        metadata={
+            "help": "Number of top k softmax scores of teacher model for KD."
+                    "Only valid when save_teacher_output is true"},
+    )
+
+    alpha: float = field(
+        default=0.9,
+        metadata={
+            "help": "Number of top k softmax scores of teacher model for KD."
+                    "Only valid when save_teacher_output is true"},
+    )
+
+
+@dataclass
 class FairseqConfig(FairseqDataclass):
     common: CommonConfig = CommonConfig()
     common_eval: CommonEvalConfig = CommonEvalConfig()
@@ -1134,6 +1155,7 @@ class FairseqConfig(FairseqDataclass):
     generation: GenerationConfig = GenerationConfig()
     eval_lm: EvalLMConfig = EvalLMConfig()
     interactive: InteractiveConfig = InteractiveConfig()
+    distillation: KnowledgeDistillationConfig = KnowledgeDistillationConfig()
     model: Any = MISSING
     task: Any = None
     criterion: Any = None
