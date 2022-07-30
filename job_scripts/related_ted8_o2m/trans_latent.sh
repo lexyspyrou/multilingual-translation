@@ -26,100 +26,106 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --decoder-langtok \
           --batch-size 32 \
 
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "tur" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engtur.log \
-          --decoder-langtok \
-          --batch-size 32 \
+grep ^H "$OUTDIR"/test_engaze.log | cut -f3 | sacremoses detokenize > "$OUTDIR"/test_engaze.detok.sys
+grep ^T "$OUTDIR"/test_engaze.log | cut -f2 | sacremoses detokenize > "$OUTDIR"/test_engaze.detok.ref
+python fairseq_cli/score.py --sys "$OUTDIR"/test_engaze.detok.sys --ref "$OUTDIR"/test_engaze.detok.ref --sacrebleu | tee "$OUTDIR"/score_engaze.log
 
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "bel" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engbel.log \
-          --decoder-langtok \
-          --batch-size 32 \
+bash scripts/sacrebleu.sh wmt14/full src_lang "aze" "$OUTDIR"/test_engaze.log | tee "$OUTDIR"/score_engaze.log
 
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "rus" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engrus.log \
-          --decoder-langtok \
-          --batch-size 32 \
-
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "glg" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engglg.log \
-          --decoder-langtok \
-          --batch-size 32 \
-
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "por" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engpor.log \
-          --decoder-langtok \
-          --batch-size 32 \
-
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "slk" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engslk.log \
-          --decoder-langtok \
-          --batch-size 32 \
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "tur" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engtur.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
 #
-python fairseq_cli/generate.py data-bin/ted_8_related/ \
-          --task multilingual_translation_latent_depth \
-          --gen-subset test \
-          --path "$OUTDIR"/checkpoint_best.pt \
-          --decoder-latent-layer \
-          --lang-pairs "${lang_pairs_str}" \
-          -s ${src_lang} -t "ces" \
-          --scoring sacrebleu \
-          --remove-bpe 'sentencepiece' \
-          --lenpen 1.0 \
-          --beam 5   > "$OUTDIR"/test_engces.log \
-          --decoder-langtok \
-          --batch-size 32 \
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "bel" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engbel.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
+#
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "rus" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engrus.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
+#
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "glg" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engglg.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
+#
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "por" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engpor.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
+#
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "slk" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engslk.log \
+#          --decoder-langtok \
+#          --batch-size 32 \
+##
+#python fairseq_cli/generate.py data-bin/ted_8_related/ \
+#          --task multilingual_translation_latent_depth \
+#          --gen-subset test \
+#          --path "$OUTDIR"/checkpoint_best.pt \
+#          --decoder-latent-layer \
+#          --lang-pairs "${lang_pairs_str}" \
+#          -s ${src_lang} -t "ces" \
+#          --scoring sacrebleu \
+#          --remove-bpe 'sentencepiece' \
+#          --lenpen 1.0 \
+#          --beam 5   > "$OUTDIR"/test_engces.log \
+#          --decoder-langtok \
+#          --batch-size 32 \

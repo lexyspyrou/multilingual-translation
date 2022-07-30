@@ -5,7 +5,7 @@
 #SBATCH --time=0
 #SBATCH --mem=15GB
 
-MODEL_DIR=checkpoints/diverse_ted8_o2m/proportional/original
+MODEL_DIR=checkpoints/diverse_ted8_o2m/proportional/original_rerun
 mkdir -p $MODEL_DIR
 
 export PYTHONPATH="$(pwd)"
@@ -31,6 +31,7 @@ python train.py data-bin/ted_8_diverse/ \
 	  --seed 2 \
     --max-source-positions 150 --max-target-positions 150 \
     --save-dir $MODEL_DIR \
+    --tensorboard-logdir $MODEL_DIR/tensorboard_dir.log \
     --encoder-normalize-before --decoder-normalize-before \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
     --skip-invalid-size-inputs-valid-test \

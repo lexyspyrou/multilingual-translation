@@ -6,7 +6,7 @@
 #SBATCH --mem=15GB
 #     	  --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
 	     #   --decoder-langtok \ when o2m setting // encoder-langtok "tgt" for m2o
-
+# DURING INFERENCE THE datasize-t argumenmt of multilingual_translation.py creates an issue (arg conflict) so i manually remove it
 OUTDIR=$1
 echo $OUTDIR
 python fairseq_cli/generate.py data-bin/ted_8_related/ \
@@ -17,6 +17,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -31,6 +32,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -46,6 +48,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
       	  --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -60,6 +63,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -74,6 +78,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -88,6 +93,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -102,6 +108,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
@@ -116,6 +123,7 @@ python fairseq_cli/generate.py data-bin/ted_8_related/ \
           --lenpen 1.0 \
           --remove-bpe sentencepiece \
 	        --sacrebleu \
+	        --datasize-t 5 \
           --encoder-langtok tgt \
 	        --skip-invalid-size-inputs-valid-test \
     	    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \

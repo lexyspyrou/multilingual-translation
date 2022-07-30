@@ -5,7 +5,8 @@
 #    --decoder-embed-dim 256 \
 #    --encoder-ffn-embed-dim 512 \
 #    --decoder-ffn-embed-dim 512 \
-MODEL_DIR=checkpoints/related_ted8_o2m/proportional/original
+#    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
+MODEL_DIR=checkpoints/related_ted8_o2m/proportional/original_rerun
 mkdir -p $MODEL_DIR
 
 export PYTHONPATH="$(pwd)"
@@ -16,7 +17,7 @@ python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
 	  --max-epoch 40  \
-    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces" \
+    --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces"\
     --no-epoch-checkpoints \
 	  --distributed-world-size 4 \
 	  --encoder-langtok "tgt" \
@@ -31,7 +32,16 @@ python train.py data-bin/ted_8_related/ \
 	  --seed 2 \
     --max-source-positions 150 --max-target-positions 150 \
     --save-dir $MODEL_DIR \
+    --tensorboard-logdir $MODEL_DIR/tensorboard_dir.log \
     --encoder-normalize-before --decoder-normalize-before \
 	  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
     --skip-invalid-size-inputs-valid-test \
     --ddp-backend=no_c10d \
+#    --encoder-layers 1 \
+#    --decoder-layers 1 \
+#    --encoder-embed-dim 32 \
+#    --decoder-embed-dim 32 \
+#    --encoder-ffn-embed-dim 64 \
+#    --decoder-ffn-embed-dim 64 \
+
+
