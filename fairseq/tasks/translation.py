@@ -8,6 +8,7 @@ import itertools
 import json
 import logging
 import os
+from typing import Dict
 from typing import Optional
 from argparse import Namespace
 from omegaconf import II
@@ -27,6 +28,7 @@ from fairseq.data import (
 )
 from fairseq.data.indexed_dataset import get_available_dataset_impl
 from fairseq.dataclass import ChoiceEnum, FairseqDataclass
+from fairseq.fed_utils import TeacherOutputDataset
 from fairseq.tasks import FairseqTask, register_task
 
 
@@ -37,27 +39,28 @@ logger = logging.getLogger(__name__)
 
 
 def load_langpair_dataset(
-    data_path,
-    split,
-    src,
-    src_dict,
-    tgt,
-    tgt_dict,
-    combine,
-    dataset_impl,
-    upsample_primary,
-    left_pad_source,
-    left_pad_target,
-    max_source_positions,
-    max_target_positions,
-    prepend_bos=False,
-    load_alignments=False,
-    truncate_source=False,
-    append_source_id=False,
-    num_buckets=0,
-    shuffle=True,
-    pad_to_multiple=1,
-    prepend_bos_src=None,
+        data_path,
+        split,
+        src,
+        src_dict,
+        tgt,
+        tgt_dict,
+        combine,
+        dataset_impl,
+        upsample_primary,
+        left_pad_source,
+        left_pad_target,
+        max_source_positions,
+        max_target_positions,
+        prepend_bos=False,
+        load_alignments=False,
+        truncate_source=False,
+        append_source_id=False,
+        num_buckets=0,
+        shuffle=True,
+        pad_to_multiple=1,
+        prepend_bos_src=None,
+        kd_configs: Dict = None  # added for KD
 ):
     def split_exists(split, src, tgt, lang, data_path):
         filename = os.path.join(data_path, "{}.{}-{}.{}".format(split, src, tgt, lang))
@@ -95,10 +98,13 @@ def load_langpair_dataset(
             )
         src_datasets.append(src_dataset)
 
+        # Probably identical to IndexedCachedDataset, used in universal_translation.
         tgt_dataset = data_utils.load_indexed_dataset(
             prefix + tgt, tgt_dict, dataset_impl
         )
+        # when set bel as tgt language, 4,509 train examples was the len(tgt dataset)
         if tgt_dataset is not None:
+            # tgt_datasets per lang is a list containing a number of integers equivalent to the number of training exmples. Each integer denotes the size of the sentence [26, 17, 28 etc..]
             tgt_datasets.append(tgt_dataset)
 
         logger.info(
@@ -153,6 +159,28 @@ def load_langpair_dataset(
             )
 
     tgt_dataset_sizes = tgt_dataset.sizes if tgt_dataset is not None else None
+
+    top_k_prob_dataset = top_k_idx_dataset = kd_alpha = None
+    if kd_configs:
+        # We need access to distill_train_k,
+        path_idx = os.path.join(data_path,
+                                '{}_{}_top_{}_idx'.format(src, tgt, kd_configs['distill_topk']))
+        top_k_idx_dataset = TeacherOutputDataset(path_idx)
+        logger.info(f"Successfully loaded top_{kd_configs['distill_topk']}_idx file")
+
+        path_prob = os.path.join(data_path,
+                                 '{}_{}_top_{}_prob'.format(src, tgt, kd_configs['distill_topk']))
+        top_k_prob_dataset = TeacherOutputDataset(path_prob)
+        logger.info(f"Successfully loaded top_{kd_configs['distill_topk']}_prob file")
+
+        kd_alpha = kd_configs['kd_alpha']
+
+        logger.info(
+            f"Length of top k probs {len(top_k_prob_dataset)}_")  # for eng-aze, the length is 5946_ as the number of examples
+
+        assert len(top_k_prob_dataset) == len(tgt_dataset), (len(top_k_prob_dataset), len(tgt_dataset))
+        assert len(top_k_idx_dataset) == len(tgt_dataset), len(top_k_idx_dataset) == len(tgt_dataset)
+
     return LanguagePairDataset(
         src_dataset,
         src_dataset.sizes,
@@ -167,6 +195,11 @@ def load_langpair_dataset(
         num_buckets=num_buckets,
         shuffle=shuffle,
         pad_to_multiple=pad_to_multiple,
+        experts_top_k_prob=top_k_prob_dataset,  # added for KD
+        experts_top_k_idx=top_k_idx_dataset,  # added for KD
+        kd_alpha=kd_alpha,  # added for KD
+        is_train=split == 'train',  # added for KD
+
     )
 
 

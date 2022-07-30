@@ -113,6 +113,9 @@ def collate(
     else:
         ntokens = src_lengths.sum().item()
 
+    # batch contains N sentences with their ids, their lengths, source and target token as well as
+    # the output of the teacher for each target position (top_k ids, top_k probabilities) and alpha (TODO: WHAT IS IT ?)
+    # and the previous tokens for the decoding.
     batch = {
         "id": id,
         "nsentences": len(samples),
