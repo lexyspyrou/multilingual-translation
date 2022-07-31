@@ -173,19 +173,21 @@ def collate(
         sizes = max(v[TOP_K_IDX].size(0) for v in samples), distill_topk
         teacher_outputs = samples[0][TOP_K_IDX][0].new(len(samples), *sizes).fill_(pad_idx).long(), \
                           samples[0][TOP_K_PROB][0].new(len(samples), *sizes).fill_(pad_idx)
-
+        assert teacher_outputs[0].shape[:2] == batch['target'].shape
         def copy_tensor(src, dst):
             dst.copy_(src)
 
         for i, v in enumerate(samples):
+            # print(i, v)
             # T * K
-            copy_tensor(v[TOP_K_IDX].long()[:, :distill_topk],
-                        teacher_outputs[0][i, :len(v[TOP_K_IDX].long()), :distill_topk])
-            copy_tensor(v[TOP_K_PROB][:, :distill_topk], teacher_outputs[1][i, :len(v[TOP_K_PROB]), :distill_topk])
+            top_k_indexes = v[TOP_K_IDX].long()  # T * K
+            copy_tensor(top_k_indexes[:, :distill_topk], teacher_outputs[0][i, :len(top_k_indexes), :distill_topk])
+
+            top_k_prob = v[TOP_K_PROB]
+            copy_tensor(top_k_prob[:, :distill_topk], teacher_outputs[1][i, :len(top_k_prob), :distill_topk])
 
         batch['teacher_output'] = teacher_outputs[0].index_select(0, sort_order), \
                                   teacher_outputs[1].index_select(0, sort_order)
-        torch.FloatTensor([s['alpha'] for s in samples]).view(-1, 1).expand(-1, target.shape[1])
         batch['alpha'] = torch.FloatTensor([s['alpha'] for s in samples]).view(-1, 1).expand(-1, target.shape[1])
     return batch
 
@@ -336,6 +338,7 @@ class LanguagePairDataset(FairseqDataset):
         return self.buckets
 
     def __getitem__(self, index):
+        # Prepare one example (sentence) from a specific language pair, and then use collater to form a batch.
         tgt_item = self.tgt[index] if self.tgt is not None else None
         src_item = self.src[index]
         # Append EOS to end of tgt sentence if it does not have an EOS and remove

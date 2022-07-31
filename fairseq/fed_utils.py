@@ -117,7 +117,7 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
         ),
         ignore_invalid_inputs=cfg.dataset.skip_invalid_size_inputs_valid_test,
         # Defines the number examples fetched at each batch iteration per language
-        # required_batch_size_multiple=8,
+        required_batch_size_multiple=8,
         seed=cfg.common.seed,
         num_shards=cfg.distributed_training.distributed_world_size,
         shard_id=cfg.distributed_training.distributed_rank,

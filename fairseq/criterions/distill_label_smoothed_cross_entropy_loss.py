@@ -63,47 +63,55 @@ class DistillLabelSmoothedCrossEntropyCriterion(LabelSmoothedCrossEntropyCriteri
         2) the sample size, which is used as the denominator for the gradient
         3) logging outputs to display while training
         """
-        net_output = model(**sample['net_input'])
-        net_output = net_output[0].float()
-        lprobs = F.log_softmax(net_output, -1)
-        lprobs = lprobs.view(-1, lprobs.shape[-1])
-        target = sample['target'].view(-1, 1)
-        non_pad_mask = target.ne(self.padding_idx)
-        if 'alpha' in sample:
-            alpha = sample['alpha'].view(-1, 1)[non_pad_mask]
-        else:
-            alpha = 0
 
-        nll_prob = -lprobs.gather(dim=-1, index=target)
-        smooth_loss = -lprobs.sum(dim=-1, keepdim=True)
+        net_output = model(**sample['net_input'])
+        net_output = net_output[0].float()  # (batch, tgt_seq_len, tgt_vocab_size)
+        lprobs = F.log_softmax(net_output, -1)  # - // -
+
+        lprobs = lprobs.view(-1, lprobs.shape[-1])  # (batch * tgt_seq_len, tgt_vocab_size)
+
+        target = sample['target'].view(-1, 1)  # ground_truth (batch * tgt_seq_len, 1)
+
+        # When padding_idx is found, then this is not a valid target, but padded. Do not calculate model
+        # loss over that example.
+        non_pad_mask = target.ne(self.padding_idx)  # boolean tensor, (batch * tgt_seq_len, 1)
+        alpha = sample['alpha'].view(-1, 1)[non_pad_mask] if 'alpha' in sample else 0
+
+        nll_prob = -lprobs.gather(dim=-1, index=target)[non_pad_mask]
+        smooth_loss = -lprobs.sum(dim=-1, keepdim=True)[non_pad_mask]
         sample_size = sample['target'].size(0) if self.sentence_avg else sample['ntokens']
 
         eps_i = self.eps / lprobs.size(-1)
 
         if 'teacher_output' in sample and sample['teacher_output'] is not None and torch.is_tensor(alpha):
-            teacher_output = sample['teacher_output']
-            net_output_lprobs_t = F.log_softmax(net_output / self.t, -1)
+            topk_idx, topk_prob = sample['teacher_output']
+
+            net_output_lprobs_t = F.log_softmax(net_output / self.distill_temp, -1)
             net_output_lprobs_t = net_output_lprobs_t.view(-1, net_output_lprobs_t.shape[-1])
 
-            topk_idx, topk_prob = teacher_output
-            topk_idx = topk_idx.view(-1, topk_idx.shape[-1])
-            topk_prob = topk_prob.view(-1, topk_prob.shape[-1])
+            topk_idx = topk_idx.view(-1, topk_idx.shape[-1])  # (batch * tgt_seq_len, top_k)
+            topk_prob = topk_prob.view(-1, topk_prob.shape[-1])  # - // -
 
-            topk_prob = F.softmax(topk_prob / self.t, -1)
+            topk_prob = F.softmax(topk_prob / self.distill_temp, -1)
 
-            distill_loss = - (net_output_lprobs_t.gather(dim=-1, index=topk_idx) * topk_prob).sum(dim=-1,
-                                                                                                  keepdim=True)
-            distill_loss = (distill_loss[non_pad_mask] * alpha).sum()
+            assert topk_idx.max() < lprobs.shape[
+                -1], f'max allowed vocabulary index is: {lprobs.shape[-1] - 1}, found index: {topk_idx.max()}'
+            distill_loss = - (net_output_lprobs_t.gather(dim=-1, index=topk_idx) * topk_prob) \
+                .sum(dim=-1, keepdim=True)[non_pad_mask]
 
-            nll_loss = (nll_prob[non_pad_mask] * (1 - alpha)).sum()
-            smooth_loss = (smooth_loss[non_pad_mask] * (1 - alpha)).sum()
+            distill_loss = (distill_loss * alpha).sum()  # Overall selective distillation loss on the batch.
+
+            nll_loss = (nll_prob * (1 - alpha)).sum()
+
+            smooth_loss = (smooth_loss * (1 - alpha)).sum()
+
             s_loss = (1. - self.eps) * nll_loss + eps_i * smooth_loss
 
-            loss = distill_loss * self.t * self.t + s_loss
-            nll_loss = nll_prob[non_pad_mask].sum()
+            loss = distill_loss * self.distill_temp * self.distill_temp + s_loss
+            nll_loss = nll_prob.sum()
         else:
-            nll_loss = nll_prob[non_pad_mask].sum()
-            smooth_loss = smooth_loss[non_pad_mask].sum()
+            nll_loss = nll_prob.sum()
+            smooth_loss = smooth_loss.sum()
             s_loss = (1. - self.eps) * nll_loss + eps_i * smooth_loss
             loss = s_loss
 
