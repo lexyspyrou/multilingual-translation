@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 # to the main thread.
 _sentinel = object()
 
+PIN_MEMORY = False
 
 class CountingIterator(object):
     """Wrapper around an iterable that maintains the iteration count.
@@ -217,7 +218,7 @@ class StreamingEpochBatchIterator(EpochBatchIterating):
             num_workers=self.num_workers,
             timeout=self.timeout,
             worker_init_fn=worker_init_fn,
-            pin_memory=True,
+            pin_memory=PIN_MEMORY,
             persistent_workers=self.num_workers > 0,
         )
 
@@ -502,7 +503,7 @@ class EpochBatchIterator(EpochBatchIterating):
                 batch_sampler=self.batch_sampler,
                 num_workers=self.num_workers,
                 timeout=self.timeout,
-                pin_memory=True,
+                pin_memory=PIN_MEMORY,
                 persistent_workers=self.num_workers > 0,
             )
 
