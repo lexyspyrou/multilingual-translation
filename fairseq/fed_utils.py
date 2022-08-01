@@ -162,6 +162,10 @@ def gen_outputs(cfg: FairseqConfig, task, trainer):
                 non_padding_mask = non_padding_mask.view(*top_k_x_shape[:2]).cpu().numpy().astype(bool)
                 # logger.info(f"non_padding_mask: {non_padding_mask.shape}")
                 for example_id in range(batch_size):
+                    assert example_id < non_padding_mask.shape[0]
+                    assert example_id < top_k_idx.shape[0]
+                    assert example_id < top_k_v.shape[0]
+
                     outputs[lang_pair][lang_pair_values['id'][example_id].item()] = \
                         tuple((top_k_idx[example_id, non_padding_mask[example_id]].tolist(),
                                top_k_v[example_id, non_padding_mask[example_id]].tolist()))
