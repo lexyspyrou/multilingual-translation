@@ -236,13 +236,13 @@ def transformer_iwslt_de_en(args):
 
 @register_model_architecture('transformer', 'transformer_iwslt_de_en_small')
 def transformer_iwslt_de_en_small(args):
-    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 16)
-    args.decoder_embed_dim = getattr(args, 'decoder_embed_dim', 16)
-    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 16)
-    args.decoder_ffn_embed_dim = getattr(args, 'decoder_ffn_embed_dim', 16)
+    args.encoder_embed_dim = getattr(args, 'encoder_embed_dim', 256)
+    args.decoder_embed_dim = getattr(args, 'decoder_embed_dim', 256)
+    args.encoder_ffn_embed_dim = getattr(args, 'encoder_ffn_embed_dim', 512)
+    args.decoder_ffn_embed_dim = getattr(args, 'decoder_ffn_embed_dim', 512)
     args.share_all_embeddings = getattr(args, "share_all_embeddings", False)
-    args.encoder_layers = getattr(args, 'encoder_layers', 1)
-    args.decoder_layers = getattr(args, 'decoder_layers', 1)
+    args.encoder_layers = getattr(args, 'encoder_layers', 2)
+    args.decoder_layers = getattr(args, 'decoder_layers', 2)
     transformer_iwslt_de_en(args)
 
 
