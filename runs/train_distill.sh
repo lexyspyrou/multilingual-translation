@@ -1,19 +1,12 @@
 #!/usr/bin/env bash
 
-arch=${arch:-transformer_iwslt_de_en_small}
-exp_name=${exp_name:-train_distill_student}
-extra_args=${extra_args:-}
-max_tokens=${max_tokens:-256}
-
-#
-#sources=${sources:-eng}
-#targets=${targets:-hin}
-data=${data:-teacher_expert/$sources-$targets}
+MODEL_DIR=checkpoints/train_distill_student_diverse_alpha0.3
+mkdir -p $MODEL_DIR
 
 export PYTHONPATH=.
 
-python train.py data-bin/ted_8_related/  \
-  --lang-pairs "eng-aze,eng-bel"\
+python train.py data-bin/ted_8_diverse/  \
+  --lang-pairs "eng-bos,eng-mar,eng-hin,eng-mkd,eng-ell,eng-bul,eng-fra,eng-kor" \
   --arch latent_multilingual_transformer \
   --task multilingual_translation_latent_depth \
   --share-decoder-input-output-embed \
@@ -23,16 +16,47 @@ python train.py data-bin/ted_8_related/  \
   --lr 0.0005 --stop-min-lr 1e-09 \
   --log-format json \
   --distill-topk 4 \
-  --max-epoch 2 \
+  --share-encoders \
+  --share-decoders \
+  --decoder-langtok \
+  --max-epoch 40 \
   --ignore-unused-valid-subsets \
-  --save-interval-updates 2000 \
   --tensorboard-logdir $MODEL_DIR/tensorboard_dir.log \
-  --log-interval 50 \
-  --dropout 0.3 --weight-decay 0.0 --criterion distill_label_smoothed_cross_entropy --label-smoothing 0.1 \
+  --dropout 0.3 \
+  --no-epoch-checkpoints \
+  --ddp-backend=legacy_ddp \
+  --weight-decay 0.0 \
+  --criterion distill_label_smoothed_cross_entropy \
+  --label-smoothing 0.1 \
   --fix-batches-to-gpus \
-  --patience 2 \
-  --max-source-positions 150 --max-target-positions 150 \
-  --max-update 1000 \
-  --max-tokens=$max_tokens \
-  --save-dir checkpoints/$exp_name   \
-  --tensorboard-logdir checkpoints/$exp_name
+  --patience 4 \
+  --save-dir $MODEL_DIR \
+  --tensorboard-logdir $MODEL_DIR \
+  --log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
+	--encoder-layers 6 \
+  --decoder-layers 6 \
+  --max-tokens 2048 \
+  --target-layers 6 \
+  --skip-invalid-size-inputs-valid-test \
+
+#alpha 0.6
+#	--encoder-layers 6 \
+#  --decoder-layers 6 \
+#  --max-tokens 512 \
+#  --target-layers 6 \
+
+#alpha0.3
+#	--encoder-layers 6 \
+#  --decoder-layers 6 \
+#  --max-tokens 6000 \
+#  --target-layers 6 \
+
+#	--encoder-layers 4 \
+#  --decoder-layers 4 \
+#  --max-tokens 4096 \
+#  --target-layers 4 \
+
+#	--encoder-layers 6 \
+#  --decoder-layers 6 \
+#  --max-tokens 10000 \
+#  --target-layers 6 \
