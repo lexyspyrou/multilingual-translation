@@ -40,7 +40,6 @@ class LatentMultilingualTransformerModel(MultilingualTransformerModel):
 
     @classmethod
     def _get_module_class(cls, is_encoder, args, lang_dict, embed_tokens, langs):
-        print("I hope I am in here")
         if is_encoder:
             if safe_hasattr(args, "encoder_latent_layer") and args.encoder_latent_layer:
                 return LatentTransformerEncoder(
