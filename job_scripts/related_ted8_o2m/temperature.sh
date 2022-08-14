@@ -10,10 +10,10 @@ echo 'slurm id '$SLURM_JOB_ID >> $MODEL_DIR/train.log
 python train.py data-bin/ted_8_related/ \
 	  --task multilingual_translation \
 	  --arch multilingual_transformer_iwslt_de_en \
-	  --max-epoch 40  \
+	  --max-epoch 41  \
     --lang-pairs "eng-aze,eng-tur,eng-bel,eng-rus,eng-glg,eng-por,eng-slk,eng-ces"\
     --no-epoch-checkpoints \
-	  --distributed-world-size 1 \
+	  --distributed-world-size 4 \
 	  --encoder-langtok "tgt" \
 	  --share-decoder-input-output-embed --share-decoders --share-encoders \
 	  --dropout 0.3 --attention-dropout 0.3 --relu-dropout 0.3 --weight-decay 0.0 \

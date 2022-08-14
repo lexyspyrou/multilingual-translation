@@ -2,7 +2,7 @@ lang_pairs_str="eng-aze,eng-bel,eng-ces,eng-glg,eng-por,eng-rus,eng-slk,eng-tur"
 
 # Code adapted to work on a small GPU: In specific, --max-tokens 4096, --encoder-layers 12, --decoder-layers 24, --target-layers 12
 
-MODEL_DIR=checkpoints/related_ted8_o2m/latent_depth/big/
+MODEL_DIR=checkpoints/related_ted8_o2m/latent_depth/original_rerun/
 mkdir -p $MODEL_DIR
 export PYTHONPATH="$(pwd)"
 
@@ -37,10 +37,10 @@ fairseq-train data-bin/ted_8_related/ \
 	--log-interval 100 >> $MODEL_DIR/train.log 2>&1 \
   --tensorboard-logdir $MODEL_DIR/tensorboard_dir.log \
 	--no-epoch-checkpoints \
-	--encoder-layers 12 \
-  --decoder-layers 24 \
-  --max-tokens 1024 \
-  --target-layers 12 \
+  --encoder-layers 6 \
+  --decoder-layers 12 \
+  --max-tokens 2048 \
+  --target-layers 6 \
 
 # Small
 #	--encoder-layers 6 \
