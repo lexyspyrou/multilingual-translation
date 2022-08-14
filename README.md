@@ -1,66 +1,76 @@
-# Balancing Training for Multilingual Neural Machine Translation
+# Compressing multilingual machine translation models with knowledge distillation
 
-Implementation of the paper
->[Balancing Training for Multilingual Neural Machine Translation](https://arxiv.org/pdf/2004.06748.pdf)
+Code for the thesis titled:
+> "Compressing multilingual machine translation models with knowledge distillation"
 
->Xinyi Wang, Yulia Tsvetkov, Graham Neubig
+> Alexandra Spyrou
+>
+>MSc Artificial Intelligence, QMUL
 
 ### Data:
-The preprocessed and binarized data for fairseq can be downloaded [here](https://drive.google.com/file/d/1xNlfgLK55SbNocQh7YpDcFUYymfVNEii/view?usp=sharing)
 
-To process data from scrach, see the script
+To process data, see the script
+
 ```
 util_scripts/prepare_multilingual_data.sh
 ```
 
 ### Training Scripts:
-The training scripts for many-to-one translation of the related language group (Related M2O) is under the directory ```job_scripts/related_ted8_m2o/```.
+
+The training scripts for one-to-many (O2M) translation of the related language group is under the
+directory ```job_scripts/related_ted8_o2m/```.
 
 Our methods:
 
-MultiDDS-S: 
-```bash
-job_scripts/related_ted8_m2o/multidds_s.sh 
-```
-MultiDDS: 
-```bash 
-job_scripts/related_ted8_m2o/multidds.sh 
-``` 
-
 Baselines:
 
-Proportional: 
+Proportional:
+
 ```bash 
-job_scripts/related_ted8_m2o/proportional.sh 
+job_scripts/related_ted8_o2m/proportional.sh 
 ``` 
-Temperature: 
+
+Temperature:
+
 ```bash 
-job_scripts/related_ted8_m2o/temperature.sh 
+job_scripts/related_ted8_o2m/temperature.sh 
 ```
 
-The scripts for Related O2M is under the directory ```job_scripts/related_ted8_o2m/``` 
+Latent depth (Sparse transformer):
 
-The scripts for Diverse M2O is under the directory ```job_scripts/diverse_ted8_m2o/``` 
+```bash 
+job_scripts/related_ted8_o2m/latent_depth.sh 
+```
 
-The scripts for Diverse O2M is under the directory ```job_scripts/diverse_ted8_o2m/``` 
+The scripts for Diverse O2M is under the directory ```job_scripts/diverse_ted8_o2m/```
+
+For Knowledge Distillation:
+
+To train the teacher and save its output distributions:
+
+```bash 
+runs/train_teacher.sh 
+```
+
+To train the student by interpolating the distillation and Negative Log-Likelihood loss
+
+```bash 
+runs/train_distill_student.sh 
+```
 
 ### Inference Scripts:
-Each of the experiment script directory contains a trans.sh file to translate the test set. To translate the test set for the Related M2O MultiDDS-S 
+
+Each of the experiment script directory contains a trans.sh file to translate the test set. To translate the test set
+for the Related O2M Proportional:
+
 ```bash
-job_scripts/related_ted8_m2o/trans.sh checkpoints/related_ted8_m2o/multidds_s/ 
+job_scripts/related_ted8_o2m/trans.sh checkpoints/related_ted8_o2m/proportional/ 
+``` 
+
+To perform inference on the Sparse transformer you need to use the trans_latent.sh file to translate the test set.
+
+```bash
+job_scripts/related_ted8_o2m/trans_latent.sh checkpoints/related_ted8_o2m/latent_depth/ 
 ``` 
 
 To translate other experiment, simply replace the argument with the experiment checkpoint directory.
-
-# Citation
-
-Please cite as:
-
-```bibtex
-@inproceedings{wang2020multiDDS,
-  title = {Balancing Training for Multilingual Neural Machine Translation},
-  author = {Xinyi Wang, Yulia Tsvetkov, Graham Neubig},
-  booktitle = {ACL},
-  year = {2020},
-}
-```
